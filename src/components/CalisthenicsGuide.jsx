@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Flame, ShieldAlert, Dumbbell, Zap, Award } from 'lucide-react';
+import { BookOpen, Flame, ShieldAlert, Dumbbell, Zap, Award, Calculator } from 'lucide-react';
 import { NUTRI_TIPS } from '../utils/mockData';
 
 const PROGRESSION_DATABASE = {
@@ -48,6 +48,47 @@ export default function CalisthenicsGuide() {
   const [selectedExerciseIdx, setSelectedExerciseIdx] = useState(0);
   const [maxPerformance, setMaxPerformance] = useState(8);
   const [calcResult, setCalcResult] = useState(null);
+
+  // State baru untuk Kalkulator 1RM
+  const [bodyWeight, setBodyWeight] = useState(60);
+  const [addedWeight, setAddedWeight] = useState(10);
+  const [repsDone, setRepsDone] = useState(5);
+  const [oneRepMaxResult, setOneRepMaxResult] = useState(null);
+
+  const calculate1RM = () => {
+    const bw = Number(bodyWeight) || 0;
+    const aw = Number(addedWeight) || 0;
+    const reps = Number(repsDone) || 1;
+    
+    const totalLoad = bw + aw;
+    const total1RM = totalLoad * (1 + reps / 30);
+    const added1RM = Math.max(0, total1RM - bw);
+
+    const targets = {
+      strength: {
+        percentage: "85% - 100%",
+        desc: "Latihan Kekuatan Maksimal (1-5 reps)",
+        load: Math.max(0, (total1RM * 0.90) - bw)
+      },
+      hypertrophy: {
+        percentage: "70% - 80%",
+        desc: "Latihan Hipertrofi / Otot (6-12 reps)",
+        load: Math.max(0, (total1RM * 0.75) - bw)
+      },
+      endurance: {
+        percentage: "50% - 65%",
+        desc: "Latihan Daya Tahan / Endurance (15+ reps)",
+        load: Math.max(0, (total1RM * 0.55) - bw)
+      }
+    };
+
+    setOneRepMaxResult({
+      total1RM: Math.round(total1RM),
+      added1RM: Math.round(added1RM),
+      targets
+    });
+  };
+
   return (
     <div className="max-w-xl mx-auto space-y-6 px-4 py-2">
       {/* Hero Welcome */}
@@ -271,6 +312,136 @@ export default function CalisthenicsGuide() {
                 <span>Selamat! Anda telah mencapai puncak variasi dasar pada pola gerakan ini. Fokus ke penambahan rep/set atau mulailah latihan tingkat lanjut lainnya.</span>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Kalkulator 1-Rep Max (1RM) Weighted Calisthenics */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <h3 className="text-md font-bold text-zinc-200 flex items-center space-x-2">
+          <Calculator className="w-5 h-5 text-amber-500 animate-pulse" />
+          <span>Kalkulator 1-Rep Max (Weighted Calisthenics)</span>
+        </h3>
+        <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+          Proyeksikan kekuatan maksimal satu repetisi (1RM) Anda dan dapatkan pembagian beban tertarget untuk latihan menggunakan sabuk beban (*weighted vest/dip belt*).
+        </p>
+
+        <div className="space-y-3.5 bg-zinc-950/60 border border-zinc-850 rounded-xl p-4">
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            {/* Input Berat Badan */}
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                Berat Badan (kg)
+              </label>
+              <input
+                type="number"
+                min="10"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-2.5 text-zinc-200 font-mono focus:outline-none focus:border-amber-500 text-center"
+                value={bodyWeight}
+                onChange={(e) => {
+                  setBodyWeight(Number(e.target.value));
+                  setOneRepMaxResult(null);
+                }}
+              />
+            </div>
+
+            {/* Input Beban Tambahan */}
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                Beban Ekstra (kg)
+              </label>
+              <input
+                type="number"
+                min="0"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-2.5 text-zinc-200 font-mono focus:outline-none focus:border-amber-500 text-center"
+                value={addedWeight}
+                onChange={(e) => {
+                  setAddedWeight(Number(e.target.value));
+                  setOneRepMaxResult(null);
+                }}
+              />
+            </div>
+
+            {/* Input Repetisi */}
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                Repetisi (Reps)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-2.5 text-zinc-200 font-mono focus:outline-none focus:border-amber-500 text-center"
+                value={repsDone}
+                onChange={(e) => {
+                  setRepsDone(Number(e.target.value));
+                  setOneRepMaxResult(null);
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={calculate1RM}
+            className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-3 px-4 rounded-lg transition text-xs cursor-pointer shadow active:scale-[0.98] select-none"
+          >
+            Hitung 1RM & Target Beban
+          </button>
+        </div>
+
+        {/* Output Hasil 1RM */}
+        {oneRepMaxResult && (
+          <div className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-4 space-y-4 animate-fadeIn">
+            <div className="grid grid-cols-2 gap-3 text-center border-b border-zinc-900 pb-3">
+              <div className="bg-zinc-900/50 border border-zinc-850 p-2 rounded-lg">
+                <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-0.5">Beban Ekstra 1RM</span>
+                <span className="text-sm font-extrabold text-amber-400 font-mono">+{oneRepMaxResult.added1RM} kg</span>
+              </div>
+              <div className="bg-zinc-900/50 border border-zinc-850 p-2 rounded-lg">
+                <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-0.5">Total Beban 1RM</span>
+                <span className="text-sm font-extrabold text-zinc-200 font-mono">{oneRepMaxResult.total1RM} kg</span>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Target Beban Tambahan Berdasarkan Zona:</span>
+              
+              {/* Strength Zone */}
+              <div className="flex items-center justify-between bg-zinc-900/40 border border-zinc-850 p-3 rounded-lg text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-bold text-zinc-200 flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                    <span>Zona Kekuatan ({oneRepMaxResult.targets.strength.percentage})</span>
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block">{oneRepMaxResult.targets.strength.desc}</span>
+                </div>
+                <span className="font-bold font-mono text-zinc-300">+{Math.round(oneRepMaxResult.targets.strength.load)} kg</span>
+              </div>
+
+              {/* Hypertrophy Zone */}
+              <div className="flex items-center justify-between bg-zinc-900/40 border border-zinc-850 p-3 rounded-lg text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-bold text-zinc-200 flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-lime-500"></span>
+                    <span>Zona Hipertrofi ({oneRepMaxResult.targets.hypertrophy.percentage})</span>
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block">{oneRepMaxResult.targets.hypertrophy.desc}</span>
+                </div>
+                <span className="font-bold font-mono text-lime-400">+{Math.round(oneRepMaxResult.targets.hypertrophy.load)} kg</span>
+              </div>
+
+              {/* Endurance Zone */}
+              <div className="flex items-center justify-between bg-zinc-900/40 border border-zinc-850 p-3 rounded-lg text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-bold text-zinc-200 flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                    <span>Zona Daya Tahan ({oneRepMaxResult.targets.endurance.percentage})</span>
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block">{oneRepMaxResult.targets.endurance.desc}</span>
+                </div>
+                <span className="font-bold font-mono text-zinc-300">+{Math.round(oneRepMaxResult.targets.endurance.load)} kg</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

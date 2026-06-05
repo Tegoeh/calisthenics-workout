@@ -18,6 +18,14 @@ export default function WorkoutSession({
   const [notes, setNotes] = useState('');
   const [showDetails, setShowDetails] = useState(false);
 
+  // State baru untuk Metronom Tempo Training
+  const [isMetronomeEnabled, setIsMetronomeEnabled] = useState(false);
+  const [tempoEccentric, setTempoEccentric] = useState(3);
+  const [tempoIsometricBottom, setTempoIsometricBottom] = useState(1);
+  const [tempoConcentric, setTempoConcentric] = useState(1);
+  const [tempoIsometricTop, setTempoIsometricTop] = useState(0);
+  const [metronomeSeconds, setMetronomeSeconds] = useState(0);
+
   function speakText(text) {
     if (isVoiceEnabled && 'speechSynthesis' in window) {
       try {
@@ -167,6 +175,31 @@ export default function WorkoutSession({
     return () => clearInterval(timerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isResting, restTimeLeft]);
+
+  // Effect untuk Metronom Tempo Training
+  useEffect(() => {
+    let metronomeInterval = null;
+    if (sessionPhase === 'workout' && !isResting && isMetronomeEnabled) {
+      metronomeInterval = setInterval(() => {
+        setMetronomeSeconds(prev => {
+          const totalDuration = tempoEccentric + tempoIsometricBottom + tempoConcentric + tempoIsometricTop;
+          const nextSec = (prev + 1) % totalDuration;
+          
+          // Awal rep (sec = 0) berbunyi bip lebih tinggi (800Hz), ketukan tempo biasa bernada rendah (500Hz)
+          const pitch = nextSec === 0 ? 800 : 500;
+          playBeep(pitch, 0.05);
+
+          return nextSec;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (metronomeInterval) clearInterval(metronomeInterval);
+      setMetronomeSeconds(0);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionPhase, isResting, isMetronomeEnabled, tempoEccentric, tempoIsometricBottom, tempoConcentric, tempoIsometricTop]);
 
   const handleFinishSet = () => {
     // Bunyikan beep saat set selesai
@@ -468,6 +501,119 @@ export default function WorkoutSession({
                     ))}
                   </ol>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Metronome & Tempo Training Panel */}
+          <div className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Metronom Tempo Training:</span>
+              <button
+                onClick={() => setIsMetronomeEnabled(!isMetronomeEnabled)}
+                className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border cursor-pointer transition select-none ${
+                  isMetronomeEnabled 
+                    ? 'bg-amber-950/30 border-amber-800/40 text-amber-400' 
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-400'
+                }`}
+              >
+                {isMetronomeEnabled ? 'Metronom ON' : 'Metronom OFF'}
+              </button>
+            </div>
+
+            {isMetronomeEnabled && (
+              <div className="space-y-3 animate-fadeIn">
+                {/* Visualizer Fase Tempo */}
+                <div className="bg-zinc-900/60 border border-zinc-850 rounded-lg p-2.5 text-center">
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wide block">Fase Gerakan Saat Ini:</span>
+                  <span className="text-sm font-extrabold text-amber-400 mt-1 block font-sans">
+                    {(() => {
+                      const sec = metronomeSeconds;
+                      if (sec < tempoEccentric) {
+                        return `⬇️ Turun (Fase Eksentrik) - ${tempoEccentric - sec}s`;
+                      } else if (sec < tempoEccentric + tempoIsometricBottom) {
+                        return `🛑 Tahan Bawah (Iso Bottom) - ${tempoEccentric + tempoIsometricBottom - sec}s`;
+                      } else if (sec < tempoEccentric + tempoIsometricBottom + tempoConcentric) {
+                        return `⬆️ Naik (Fase Konsentrik) - ${tempoEccentric + tempoIsometricBottom + tempoConcentric - sec}s`;
+                      } else {
+                        return `🛑 Tahan Atas (Iso Top) - ${tempoEccentric + tempoIsometricBottom + tempoConcentric + tempoIsometricTop - sec}s`;
+                      }
+                    })()}
+                  </span>
+                  
+                  {/* Tanda ketukan (bip visual) */}
+                  <div className="flex justify-center space-x-1.5 mt-2.5">
+                    {Array.from({ length: tempoEccentric + tempoIsometricBottom + tempoConcentric + tempoIsometricTop }).map((_, idx) => (
+                      <span 
+                        key={idx}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-150 ${
+                          metronomeSeconds === idx 
+                            ? 'bg-amber-400 scale-125 shadow-md shadow-amber-400/50' 
+                            : 'bg-zinc-800'
+                        }`}
+                      ></span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pengaturan Tempo (Slider Mini) */}
+                <div className="grid grid-cols-4 gap-2 text-[10px] border-t border-zinc-900 pt-3">
+                  <div>
+                    <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-1">Eksentrik</span>
+                    <select
+                      value={tempoEccentric}
+                      onChange={(e) => {
+                        setTempoEccentric(Number(e.target.value));
+                        setMetronomeSeconds(0);
+                      }}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-1 text-zinc-350 font-mono focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}s</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-1">Iso Bawah</span>
+                    <select
+                      value={tempoIsometricBottom}
+                      onChange={(e) => {
+                        setTempoIsometricBottom(Number(e.target.value));
+                        setMetronomeSeconds(0);
+                      }}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-1 text-zinc-350 font-mono focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      {[0, 1, 2, 3].map(v => <option key={v} value={v}>{v}s</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-1">Konsentrik</span>
+                    <select
+                      value={tempoConcentric}
+                      onChange={(e) => {
+                        setTempoConcentric(Number(e.target.value));
+                        setMetronomeSeconds(0);
+                      }}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-1 text-zinc-350 font-mono focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      {[1, 2, 3].map(v => <option key={v} value={v}>{v}s</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-1">Iso Atas</span>
+                    <select
+                      value={tempoIsometricTop}
+                      onChange={(e) => {
+                        setTempoIsometricTop(Number(e.target.value));
+                        setMetronomeSeconds(0);
+                      }}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-1 text-zinc-350 font-mono focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      {[0, 1, 2, 3].map(v => <option key={v} value={v}>{v}s</option>)}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-[9px] text-zinc-500 leading-relaxed font-sans text-center">
+                  Tempo standar: <span className="font-mono text-zinc-400">3s Turun - 1s Tahan - 1s Naik</span>. Bunyi bip akan melatih ritme gerakan yang konstan.
+                </p>
               </div>
             )}
           </div>

@@ -68,8 +68,42 @@ export default function App() {
     return localStorage.getItem('calisthenics_last_physique_update') || '';
   });
 
+  const [personalRecords, setPersonalRecords] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_personal_records');
+    return saved ? JSON.parse(saved) : {
+      pullup: 0,
+      pushup: 0,
+      dips: 0,
+      lsit: 0,
+      plank: 0,
+      handstand: 0
+    };
+  });
 
-  
+  const [recoveryToday, setRecoveryToday] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_recovery_today');
+    const today = new Date().toISOString().split('T')[0];
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.date === today) {
+        return parsed.data;
+      }
+    }
+    return null;
+  });
+
+  const handleUpdatePR = (key, value) => {
+    const updated = { ...personalRecords, [key]: Number(value) };
+    setPersonalRecords(updated);
+    localStorage.setItem('calisthenics_personal_records', JSON.stringify(updated));
+  };
+
+  const handleUpdateRecovery = (data) => {
+    const today = new Date().toISOString().split('T')[0];
+    setRecoveryToday(data);
+    localStorage.setItem('calisthenics_recovery_today', JSON.stringify({ date: today, data }));
+  };
+
   // State untuk sesi aktif
   const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
   const [loading, setLoading] = useState(false);
@@ -395,6 +429,10 @@ export default function App() {
                   setLastPhysiqueUpdate(date);
                   localStorage.setItem('calisthenics_last_physique_update', date);
                 }}
+                personalRecords={personalRecords}
+                onUpdatePR={handleUpdatePR}
+                recoveryToday={recoveryToday}
+                onUpdateRecovery={handleUpdateRecovery}
               />
             )}
             {activeTab === 'history' && (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2 } from 'lucide-react';
+import { Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2, Award, Activity, Edit3 } from 'lucide-react';
 
 export default function Dashboard({ 
   jadwal, 
@@ -14,7 +14,11 @@ export default function Dashboard({
   height,
   setHeight,
   lastPhysiqueUpdate,
-  setLastPhysiqueUpdate
+  setLastPhysiqueUpdate,
+  personalRecords = { pullup: 0, pushup: 0, dips: 0, lsit: 0, plank: 0, handstand: 0 },
+  onUpdatePR,
+  recoveryToday = null,
+  onUpdateRecovery
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
   
@@ -22,6 +26,60 @@ export default function Dashboard({
   const [taskWeight, setTaskWeight] = useState(weight);
   const [taskHeight, setTaskHeight] = useState(height);
   const [taskSuccess, setTaskSuccess] = useState(false);
+
+  // State baru untuk Recovery Tracker
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [sleepRating, setSleepRating] = useState(3);
+  const [sorenessRating, setSorenessRating] = useState(3);
+  const [energyRating, setEnergyRating] = useState(3);
+
+  // State baru untuk PR Milestone
+  const [showPRModal, setShowPRModal] = useState(false);
+  const [editingPRKey, setEditingPRKey] = useState('pullup');
+  const [editingPRValue, setEditingPRValue] = useState(0);
+
+  const handleRecoverySubmit = (e) => {
+    e.preventDefault();
+    const score = Math.round(((sleepRating + (6 - sorenessRating) + energyRating) / 15) * 100);
+    let status = 'sedang';
+    let rekomendasi = 'Kondisi Cukup. Disarankan latihan dengan volume sedang, fokus pada teknik gerakan, atau deload.';
+    
+    if (score >= 80) {
+      status = 'prima';
+      rekomendasi = 'Kondisi Prima! Tubuh Anda siap untuk latihan intens atau memecahkan rekor pribadi (PR).';
+    } else if (score < 50) {
+      status = 'istirahat';
+      rekomendasi = 'Wajib Istirahat (Rest Day). Otot & tendon membutuhkan pemulihan penuh untuk menghindari cedera.';
+    }
+    
+    onUpdateRecovery({
+      score,
+      sleep: sleepRating,
+      soreness: sorenessRating,
+      energy: energyRating,
+      status,
+      rekomendasi
+    });
+    setShowRecoveryModal(false);
+  };
+
+  const handlePRSubmit = (e) => {
+    e.preventDefault();
+    onUpdatePR(editingPRKey, Number(editingPRValue));
+    setShowPRModal(false);
+  };
+
+  const getPRLabel = (key) => {
+    switch (key) {
+      case 'pullup': return 'Pull-up (Repetisi)';
+      case 'pushup': return 'Push-up (Repetisi)';
+      case 'dips': return 'Dips (Repetisi)';
+      case 'lsit': return 'L-Sit (Detik)';
+      case 'plank': return 'Plank (Detik)';
+      case 'handstand': return 'Handstand (Detik)';
+      default: return key;
+    }
+  };
 
   // Ambil nama hari bahasa Indonesia
   const getIndonesianDay = () => {
@@ -141,6 +199,75 @@ export default function Dashboard({
             <span className="text-[8px] text-zinc-500 block mt-0.5">Sintesis Otot</span>
           </div>
         </div>
+      </div>
+
+      {/* Recovery Score Tracker Card */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <span className="p-2 bg-rose-950/40 rounded-xl border border-rose-800/30 text-rose-400">
+              <Activity className="w-5 h-5" />
+            </span>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-300">Kesiapan Fisik & Pemulihan</h3>
+          </div>
+          {recoveryToday && (
+            <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+              recoveryToday.status === 'prima' 
+                ? 'text-lime-400 bg-lime-950/30 border-lime-900/30' 
+                : recoveryToday.status === 'sedang' 
+                ? 'text-amber-400 bg-amber-950/30 border-amber-900/30'
+                : 'text-red-400 bg-red-950/30 border-red-900/30'
+            }`}>
+              Skor: {recoveryToday.score}%
+            </span>
+          )}
+        </div>
+
+        {recoveryToday ? (
+          <div className="space-y-3">
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              {recoveryToday.rekomendasi}
+            </p>
+            <div className="grid grid-cols-3 gap-2 pt-1.5 text-center text-[10px] font-semibold text-zinc-400">
+              <div className="bg-zinc-950/40 border border-zinc-850 py-2 rounded-lg">
+                <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-0.5">Tidur</span>
+                <span className="text-zinc-200 font-mono">{recoveryToday.sleep}/5</span>
+              </div>
+              <div className="bg-zinc-950/40 border border-zinc-850 py-2 rounded-lg">
+                <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-0.5">Pegal</span>
+                <span className="text-zinc-200 font-mono">{recoveryToday.soreness}/5</span>
+              </div>
+              <div className="bg-zinc-950/40 border border-zinc-850 py-2 rounded-lg">
+                <span className="text-zinc-500 block text-[8px] uppercase font-bold mb-0.5">Energi</span>
+                <span className="text-zinc-200 font-mono">{recoveryToday.energy}/5</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setSleepRating(recoveryToday.sleep);
+                setSorenessRating(recoveryToday.soreness);
+                setEnergyRating(recoveryToday.energy);
+                setShowRecoveryModal(true);
+              }}
+              className="w-full text-center text-[10px] text-zinc-500 hover:text-zinc-300 font-bold transition cursor-pointer pt-1"
+            >
+              Perbarui Evaluasi
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Ketahui tingkat kesiapan otot, sistem saraf, dan tendon Anda hari ini untuk menentukan intensitas latihan yang optimal.
+            </p>
+            <button
+              onClick={() => setShowRecoveryModal(true)}
+              className="w-full bg-rose-600 hover:bg-rose-500 text-zinc-100 font-bold py-2.5 px-4 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none active:scale-[0.98] shadow-md shadow-rose-900/10"
+            >
+              <span>Evaluasi Kesiapan Tubuh Hari Ini</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Progress Nutrisi Hari Ini */}
@@ -388,6 +515,185 @@ export default function Dashboard({
           </div>
         </div>
       </div>
+
+      {/* Wall of Fame - Personal Records */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl"></div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <span className="p-2 bg-amber-950/40 rounded-xl border border-amber-800/30 text-amber-400">
+              <Award className="w-5 h-5" />
+            </span>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-300">Wall of Fame - Rekor Pribadi</h3>
+          </div>
+        </div>
+
+        <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+          Miliki catatan rekor gerakan calisthenics terbaik Anda untuk memacu motivasi *progressive overload*.
+        </p>
+
+        {/* PR Grid */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          {Object.keys(personalRecords).map((key) => {
+            const val = personalRecords[key];
+            const isDuration = ['lsit', 'plank', 'handstand'].includes(key);
+            return (
+              <div 
+                key={key} 
+                className="bg-zinc-950/50 border border-zinc-850 rounded-xl p-3 flex items-center justify-between hover:border-zinc-800 transition"
+              >
+                <div>
+                  <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">
+                    {key === 'pullup' ? 'Pull-Up' : key === 'pushup' ? 'Push-Up' : key === 'dips' ? 'Dips' : key === 'lsit' ? 'L-Sit' : key === 'plank' ? 'Plank' : 'Handstand'}
+                  </span>
+                  <span className="text-xs font-extrabold text-zinc-200 mt-1 block font-mono">
+                    {val} {isDuration ? 'detik' : 'reps'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingPRKey(key);
+                    setEditingPRValue(val);
+                    setShowPRModal(true);
+                  }}
+                  className="p-1.5 hover:bg-zinc-900 rounded text-zinc-500 hover:text-amber-400 transition cursor-pointer"
+                  title="Update Rekor"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recovery Evaluation Modal */}
+      {showRecoveryModal && (
+        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-850 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-zinc-850">
+              <Activity className="w-5 h-5 text-rose-500" />
+              <h3 className="font-bold text-sm text-zinc-100">Kesiapan Latihan Hari Ini</h3>
+            </div>
+            
+            <form onSubmit={handleRecoverySubmit} className="space-y-4 text-xs">
+              {/* Sleep Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-zinc-400 font-semibold">
+                  <span>Kualitas Tidur (Semalam)</span>
+                  <span className="text-zinc-200 font-mono">{sleepRating}/5</span>
+                </div>
+                <input 
+                  type="range" min="1" max="5" 
+                  value={sleepRating} 
+                  onChange={(e) => setSleepRating(Number(e.target.value))}
+                  className="w-full accent-rose-500 cursor-pointer h-1.5 bg-zinc-950 rounded-lg appearance-none"
+                />
+                <div className="flex justify-between text-[9px] text-zinc-500">
+                  <span>Sangat Buruk</span>
+                  <span>Sangat Nyenyak</span>
+                </div>
+              </div>
+
+              {/* Soreness Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-zinc-400 font-semibold">
+                  <span>Tingkat Pegal/Sakit Otot</span>
+                  <span className="text-zinc-200 font-mono">{sorenessRating}/5</span>
+                </div>
+                <input 
+                  type="range" min="1" max="5" 
+                  value={sorenessRating} 
+                  onChange={(e) => setSorenessRating(Number(e.target.value))}
+                  className="w-full accent-rose-500 cursor-pointer h-1.5 bg-zinc-950 rounded-lg appearance-none"
+                />
+                <div className="flex justify-between text-[9px] text-zinc-500">
+                  <span>Tidak Pegal</span>
+                  <span>Sangat Pegal</span>
+                </div>
+              </div>
+
+              {/* Energy Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-zinc-400 font-semibold">
+                  <span>Energi & Kelelahan Tubuh</span>
+                  <span className="text-zinc-200 font-mono">{energyRating}/5</span>
+                </div>
+                <input 
+                  type="range" min="1" max="5" 
+                  value={energyRating} 
+                  onChange={(e) => setEnergyRating(Number(e.target.value))}
+                  className="w-full accent-rose-500 cursor-pointer h-1.5 bg-zinc-950 rounded-lg appearance-none"
+                />
+                <div className="flex justify-between text-[9px] text-zinc-500">
+                  <span>Sangat Lelah</span>
+                  <span>Sangat Berenergi</span>
+                </div>
+              </div>
+
+              <div className="flex space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRecoveryModal(false)}
+                  className="flex-1 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 font-bold py-2.5 rounded-xl transition cursor-pointer text-center"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 text-zinc-100 font-bold py-2.5 rounded-xl transition cursor-pointer text-center"
+                >
+                  Simpan Skor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PR Update Modal */}
+      {showPRModal && (
+        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-850 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-zinc-850">
+              <Award className="w-5 h-5 text-amber-500" />
+              <h3 className="font-bold text-sm text-zinc-100">Perbarui Rekor Baru</h3>
+            </div>
+            
+            <form onSubmit={handlePRSubmit} className="space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="text-zinc-400 font-semibold block">
+                  {getPRLabel(editingPRKey)}
+                </label>
+                <input 
+                  type="number" 
+                  min="0"
+                  value={editingPRValue} 
+                  onChange={(e) => setEditingPRValue(Math.max(0, Number(e.target.value)))}
+                  className="w-full bg-zinc-950 border border-zinc-850 hover:border-zinc-800 focus:border-amber-500 focus:outline-none p-3 rounded-xl text-zinc-100 font-bold font-mono text-center text-md"
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowPRModal(false)}
+                  className="flex-1 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 font-bold py-2.5 rounded-xl transition cursor-pointer text-center"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold py-2.5 rounded-xl transition cursor-pointer text-center"
+                >
+                  Simpan Rekor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
