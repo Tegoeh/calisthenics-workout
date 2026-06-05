@@ -62,7 +62,7 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
           })
         });
 
-        if (!response.ok) throw new Error("Gagal menghubungi server analisis");
+        if (!response.ok) throw new Error("Gagal menghubungi server analisis Google Sheets");
         
         const data = await response.json();
         
@@ -73,16 +73,12 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
             : data.analysis;
           setResult(parsedResult);
         } else {
-          // Jika Apps Script belum disetel API Key-nya, jalankan fallback simulasi cerdas
-          console.warn("Apps Script belum dikonfigurasi dengan Gemini API. Mengaktifkan simulasi...");
-          setIsSimulated(true);
-          runSimulationAnalysis();
+          // Tampilkan pesan error spesifik jika API gagal di Apps Script
+          setError("Error Apps Script: " + (data.message || "Gagal melakukan analisis"));
         }
       } catch (err) {
         console.error("Gagal melakukan analisis API online:", err);
-        // Fallback simulasi jika error koneksi
-        setIsSimulated(true);
-        runSimulationAnalysis();
+        setError("Koneksi Error: " + err.message);
       } finally {
         setLoading(false);
       }
