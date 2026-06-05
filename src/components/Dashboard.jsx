@@ -28,10 +28,17 @@ export default function Dashboard({
   rpgXp = 0,
   rpgCoins = 0,
   rpgBossesDefeated = 0,
-  rpgBadges = []
+  rpgBadges = [],
+  rpgInventory = [],
+  rpgEquipped = { weapon: null, armor: null, shield: null },
+  dailyQuests = [],
+  onBuyItem = () => {},
+  onEquipItem = () => {},
+  onClaimQuestReward = () => {}
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
   const [activeQuickAdjust, setActiveQuickAdjust] = useState(null);
+  const [dashboardSubTab, setDashboardSubTab] = useState('workout'); // 'workout' | 'shop' | 'quests'
   
   // State untuk form input task update BB/TB
   const [taskWeight, setTaskWeight] = useState(weight);
@@ -239,8 +246,48 @@ export default function Dashboard({
           </div>
         )}
       </div>
-      {/* Profil Calisthenics & BMI Header */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+
+      {/* Sub Tab Navigation Selector */}
+      <div className="flex bg-zinc-950 border border-zinc-850 p-1 rounded-2xl gap-1">
+        <button
+          type="button"
+          onClick={() => setDashboardSubTab('workout')}
+          className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer select-none ${
+            dashboardSubTab === 'workout'
+              ? 'bg-zinc-900 border border-zinc-800 text-lime-400 font-extrabold shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-350'
+          }`}
+        >
+          💪 Latihan & Fisik
+        </button>
+        <button
+          type="button"
+          onClick={() => setDashboardSubTab('shop')}
+          className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer select-none ${
+            dashboardSubTab === 'shop'
+              ? 'bg-zinc-900 border border-zinc-800 text-amber-400 font-extrabold shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-350'
+          }`}
+        >
+          🪙 Toko & Inventory
+        </button>
+        <button
+          type="button"
+          onClick={() => setDashboardSubTab('quests')}
+          className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer select-none ${
+            dashboardSubTab === 'quests'
+              ? 'bg-zinc-900 border border-zinc-800 text-cyan-400 font-extrabold shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-350'
+          }`}
+        >
+          📜 Misi Harian
+        </button>
+      </div>
+
+      {dashboardSubTab === 'workout' && (
+        <>
+          {/* Profil Calisthenics & BMI Header */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-24 h-24 bg-lime-500/10 rounded-full blur-2xl"></div>
         <div className="flex items-center space-x-3 mb-4">
           <div className="p-2.5 bg-lime-950/40 rounded-xl border border-lime-800/30 text-lime-400">
@@ -659,6 +706,196 @@ export default function Dashboard({
           })}
         </div>
       </div>
+      </>
+      )}
+
+      {/* SHOP & INVENTORY SUB-TAB CONTENT */}
+      {dashboardSubTab === 'shop' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Status Hero HUD */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <h3 className="text-xs font-black text-zinc-150 uppercase tracking-wide border-b border-zinc-800/80 pb-2 flex items-center space-x-1.5">
+              <span>👤</span>
+              <span>Status Equipment Hero</span>
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-zinc-950/60 border border-zinc-855 p-3 rounded-xl text-center space-y-1">
+                <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Senjata</span>
+                <span className="text-xl block">{rpgEquipped?.weapon?.icon || '👊'}</span>
+                <span className="text-[10px] font-bold text-zinc-200 block truncate">{rpgEquipped?.weapon?.name || 'Tangan Kosong'}</span>
+                <span className="text-[9px] text-amber-400 font-mono block">{rpgEquipped?.weapon?.statBonus || '1x Damage'}</span>
+              </div>
+              <div className="bg-zinc-950/60 border border-zinc-855 p-3 rounded-xl text-center space-y-1">
+                <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Zirah</span>
+                <span className="text-xl block">{rpgEquipped?.armor?.icon || '👕'}</span>
+                <span className="text-[10px] font-bold text-zinc-200 block truncate">{rpgEquipped?.armor?.name || 'Baju Biasa'}</span>
+                <span className="text-[9px] text-emerald-400 font-mono block">{rpgEquipped?.armor?.statBonus || '+0% Armor'}</span>
+              </div>
+              <div className="bg-zinc-950/60 border border-zinc-855 p-3 rounded-xl text-center space-y-1">
+                <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Perisai</span>
+                <span className="text-xl block">{rpgEquipped?.shield?.icon || '❌'}</span>
+                <span className="text-[10px] font-bold text-zinc-200 block truncate">{rpgEquipped?.shield?.name || 'Kosong'}</span>
+                <span className="text-[9px] text-cyan-400 font-mono block">{rpgEquipped?.shield?.statBonus || '+0% Block'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Toko RPG */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <h3 className="text-xs font-black text-zinc-150 uppercase tracking-wide border-b border-zinc-800 pb-2 flex items-center justify-between">
+              <span className="flex items-center space-x-1.5">
+                <span>🪙</span>
+                <span>Toko Pahlawan (Shop)</span>
+              </span>
+              <span className="text-[9px] bg-amber-950/30 text-amber-400 border border-amber-800/30 px-2.5 py-0.5 rounded-full font-bold">
+                Koin: {rpgCoins} 🪙
+              </span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { id: "weapon_iron_sword", name: "Pedang Besi Pahlawan", type: "weapon", statBonus: "+15% Damage Bos", cost: 50, desc: "Pedang tempaan besi kasar yang meningkatkan daya hancur serangan pada bos.", icon: "⚔️" },
+                { id: "weapon_fire_claymore", name: "Fire Claymore Legendaris", type: "weapon", statBonus: "+35% Damage Bos", cost: 180, desc: "Pedang dua tangan berlapis kobaran api abadi. Tebasan Anda membakar habis pertahanan bos.", icon: "🔥" },
+                { id: "armor_leather_vest", name: "Rompi Kulit Petualang", type: "armor", statBonus: "+10% Kebal Bos", cost: 40, desc: "Rompi dari kulit tebal untuk melindungi tubuh dari hantaman bos.", icon: "🛡️" },
+                { id: "armor_titanium_plate", name: "Pelindung Titanium Raksasa", type: "armor", statBonus: "+30% Kebal Bos", cost: 150, desc: "Zirah titanium super kokoh yang membuat serangan bos terasa seperti cubitan lembut.", icon: "🦾" },
+                { id: "shield_wooden_buckler", name: "Buckler Kayu Kokoh", type: "shield", statBonus: "+5% Def & Block", cost: 25, desc: "Perisai bundar kecil dari kayu jati tua untuk menepis tebasan bos.", icon: "🛡️" },
+                { id: "shield_energy_barrier", name: "Aegis Energy Barrier", type: "shield", statBonus: "+25% Def & Block", cost: 120, desc: "Teknologi penghalang energi neon yang memblokir serangan bos secara absolut.", icon: "🔮" }
+              ].map(item => {
+                const isOwned = rpgInventory.some(inv => inv.id === item.id);
+                const isEquipped = rpgEquipped.weapon?.id === item.id || rpgEquipped.armor?.id === item.id || rpgEquipped.shield?.id === item.id;
+                
+                return (
+                  <div key={item.id} className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-3 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-start">
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="text-[8px] font-mono text-amber-400 font-extrabold bg-amber-950/20 border border-amber-900/30 px-2 py-0.5 rounded">
+                          {item.statBonus}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-zinc-200 leading-tight">{item.name}</h4>
+                      <p className="text-[10px] text-zinc-500 font-sans leading-relaxed">{item.desc}</p>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-zinc-900 flex justify-between items-center">
+                      <span className="text-[10px] font-bold font-mono text-amber-400 flex items-center space-x-1">
+                        <span>{item.cost}</span>
+                        <span>🪙</span>
+                      </span>
+                      {isOwned ? (
+                        isEquipped ? (
+                          <span className="text-[9px] bg-lime-950/30 text-lime-400 border border-lime-900/30 px-3 py-1 rounded-lg font-bold">
+                            Dipakai ✓
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onEquipItem(item)}
+                            className="bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-[9px] text-zinc-300 font-bold px-3 py-1 rounded-lg transition cursor-pointer select-none active:scale-[0.95]"
+                          >
+                            Pakai (Equip)
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onBuyItem(item)}
+                          disabled={rpgCoins < item.cost}
+                          className={`text-[9px] font-bold px-3 py-1 rounded-lg transition cursor-pointer select-none active:scale-[0.95] ${
+                            rpgCoins >= item.cost
+                              ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950'
+                              : 'bg-zinc-900/40 border border-zinc-850 text-zinc-600 cursor-not-allowed'
+                          }`}
+                        >
+                          Beli Item
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DAILY QUESTS SUB-TAB CONTENT */}
+      {dashboardSubTab === 'quests' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="border-b border-zinc-800 pb-2 flex justify-between items-center">
+              <h3 className="text-xs font-black text-zinc-150 uppercase tracking-wide flex items-center space-x-1.5">
+                <span>📜</span>
+                <span>Misi Harian Pahlawan</span>
+              </h3>
+              <span className="text-[8px] bg-cyan-950/40 text-cyan-400 border border-cyan-800/30 px-2.5 py-0.5 rounded-full font-bold">
+                Reset Jam 00:00
+              </span>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+              Selesaikan misi-misi latihan harian di bawah ini untuk mendapatkan bonus Koin dan XP tambahan guna memacu progres pahlawan Anda!
+            </p>
+
+            <div className="space-y-3 pt-1">
+              {dailyQuests && dailyQuests.length > 0 ? (
+                dailyQuests.map((q) => {
+                  const percent = Math.min(Math.round((q.current / q.target) * 100), 100);
+                  return (
+                    <div key={q.id} className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-4.5 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <span className="text-xs font-bold text-zinc-200 block">{q.text}</span>
+                          <div className="flex items-center space-x-2 text-[10px] text-zinc-500 font-mono">
+                            <span>Hadiah:</span>
+                            <span className="text-amber-400">{q.rewardCoins} Koin 🪙</span>
+                            <span>•</span>
+                            <span className="text-cyan-400">+{q.rewardXp} XP ⚡</span>
+                          </div>
+                        </div>
+                        {q.claimed ? (
+                          <span className="bg-lime-950/40 text-lime-400 border border-lime-900/40 text-[9px] font-extrabold px-2.5 py-1 rounded-lg shrink-0 flex items-center space-x-1">
+                            <span>Klaim Selesai ✓</span>
+                          </span>
+                        ) : q.completed ? (
+                          <button
+                            type="button"
+                            onClick={() => onClaimQuestReward(q.id)}
+                            className="bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-[9px] font-extrabold px-3 py-1.5 rounded-lg shrink-0 shadow-lg shadow-cyan-500/10 active:scale-[0.95] transition cursor-pointer select-none animate-pulse"
+                          >
+                            Klaim Hadiah 🎁
+                          </button>
+                        ) : (
+                          <span className="bg-zinc-900/60 text-zinc-500 border border-zinc-850 text-[9px] font-bold px-2.5 py-1 rounded-lg shrink-0">
+                            Aktif ({percent}%)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="space-y-1">
+                        <div className="w-full h-1.5 bg-zinc-950 border border-zinc-850/30 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${q.completed ? 'bg-lime-500' : 'bg-cyan-500'}`}
+                            style={{ width: `${percent}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-[9px] text-zinc-500 font-mono">
+                          <span>Progres Misi</span>
+                          <span>{q.current} / {q.target}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-xs text-zinc-500 py-6 font-sans">
+                  Tidak ada misi harian aktif.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recovery Evaluation Modal */}
       {showRecoveryModal && (

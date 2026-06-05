@@ -21,7 +21,9 @@ export default function WorkoutSession({
   weightHistory = [],
   progressHistory = [],
   onReplaceJadwalExercise = () => {},
-  onRewardRPG = () => {}
+  onRewardRPG = () => {},
+  rpgEquipped = { weapon: null, armor: null, shield: null },
+  onUpdateQuestProgress = () => {}
 }) {
   const [sessionPhase, setSessionPhase] = useState('warmup'); // 'warmup' | 'workout' | 'cooldown' | 'finish'
 
@@ -130,6 +132,20 @@ export default function WorkoutSession({
       }
     };
   }, []);
+
+  // Voice feedback pada pergantian phase latihan (AI Workout Coach)
+  useEffect(() => {
+    if (sessionPhase === 'warmup') {
+      speakText("Selamat datang di sesi latihan. Mari lakukan pemanasan terlebih dahulu untuk menghindari cedera.");
+    } else if (sessionPhase === 'workout') {
+      speakText(`Sesi latihan inti dimulai. Gerakan pertama adalah ${activeExercise?.NamaGerakan || ''}. Lakukan sebanyak ${activeExercise?.Reps || ''}.`);
+    } else if (sessionPhase === 'cooldown') {
+      speakText("Latihan inti selesai. Mari masuk ke sesi pendinginan untuk menenangkan otot dan sendi.");
+    } else if (sessionPhase === 'finish') {
+      speakText("Selamat! Seluruh rangkaian latihan hari ini telah selesai. Rekor baru Anda telah dicatat.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionPhase]);
 
   const calculateAngle = (a, b, c) => {
     if (!a || !b || !c) return 180;
@@ -270,18 +286,41 @@ export default function WorkoutSession({
               const currentVal = prev[repsKey] !== undefined ? prev[repsKey] : parseTargetReps(activeExercise.Reps);
               const nextVal = currentVal + 1;
 
-              // Kurangi HP bos secara real-time!
-              setBossHp(bossPrev => Math.max(bossPrev - 1, 0));
-              setDamageDealtTotal(damagePrev => damagePrev + 1);
+              // Hitung damage multiplier senjata RPG
+              let damageMultiplier = 1;
+              if (rpgEquipped?.weapon?.id === 'weapon_iron_sword') damageMultiplier = 1.15;
+              if (rpgEquipped?.weapon?.id === 'weapon_fire_claymore') damageMultiplier = 1.35;
 
-              // Bunyikan beep sukses rep & voice feedback
+              // Kurangi HP bos secara real-time!
+              const dmg = Number((1 * damageMultiplier).toFixed(2));
+              setBossHp(bossPrev => Math.max(Number((bossPrev - dmg).toFixed(2)), 0));
+              setDamageDealtTotal(damagePrev => Number((damagePrev + dmg).toFixed(2)));
+
+              // Update progres quest reps harian
+              onUpdateQuestProgress('quest_reps', 1);
+
+              // Bunyikan beep sukses rep & AI Workout Coach Voice Feedback
               playBeep(880, 0.1);
-              speakText(nextVal.toString());
+              
+              let voiceMsg = nextVal.toString();
+              if (nextVal === 3) {
+                const motivates = [
+                  "Form yang mantap! Jaga ritme.",
+                  "Bagus sekali! Rasakan kontraksi ototnya.",
+                  "Terus bergerak, Anda melakukannya dengan benar!"
+                ];
+                voiceMsg += `. ${motivates[Math.floor(Math.random() * motivates.length)]}`;
+              } else if (nextVal === 6) {
+                voiceMsg += ". Luar biasa! Setengah jalan lagi bos akan tumbang.";
+              } else if (nextVal === 10) {
+                voiceMsg += ". Sempurna! Target repetisi tercapai. Sangat kuat!";
+              }
+              speakText(voiceMsg);
 
               // Tambahkan battle log pertempuran
               const selectedBoss = BOSSES[selectedBossIdx];
               setBattleLog(logPrev => [
-                `💥 Rep ke-${nextVal} ${activeExercise.NamaGerakan} mengenai ${selectedBoss.name}! (-1 HP)`,
+                `💥 Rep ke-${nextVal} ${activeExercise.NamaGerakan} mengenai ${selectedBoss.name}! (${damageMultiplier > 1 ? `Bonus Weapon: ` : ''}-${dmg} HP)`,
                 ...logPrev
               ].slice(0, 5));
 
@@ -578,14 +617,25 @@ export default function WorkoutSession({
   const handleFinishSet = () => {
     playBeep(660, 0.15);
     
-    // Kurangi HP bos berdasarkan currentRepsValue
-    const damage = Number(currentRepsValue || 0);
-    setBossHp(prev => Math.max(prev - damage, 0));
-    setDamageDealtTotal(prev => prev + damage);
+    // Hitung damage multiplier berdasarkan senjata yang dipakai
+    let damageMultiplier = 1;
+    if (rpgEquipped?.weapon?.id === 'weapon_iron_sword') damageMultiplier = 1.15;
+    if (rpgEquipped?.weapon?.id === 'weapon_fire_claymore') damageMultiplier = 1.35;
+    
+    // Kurangi HP bos berdasarkan currentRepsValue * multiplier
+    const damage = Number((Number(currentRepsValue || 0) * damageMultiplier).toFixed(2));
+    setBossHp(prev => Math.max(Number((prev - damage).toFixed(2)), 0));
+    setDamageDealtTotal(prev => Number((prev + damage).toFixed(2)));
+    
+    // Update progres quest reps harian & metronom
+    onUpdateQuestProgress('quest_reps', Number(currentRepsValue || 0));
+    if (isMetronomeEnabled) {
+      onUpdateQuestProgress('quest_metronome', 1);
+    }
     
     // Tambahkan battle log
     const selectedBoss = BOSSES[selectedBossIdx];
-    const logMessage = `💥 Boom! Anda menyerang ${selectedBoss.name} dengan ${activeExercise.NamaGerakan} sebanyak ${damage} reps!`;
+    const logMessage = `💥 Boom! Anda menyerang ${selectedBoss.name} dengan ${activeExercise.NamaGerakan} sebanyak ${currentRepsValue} reps! (${damageMultiplier > 1 ? `Bonus Weapon: ` : ''}-${damage} HP)`;
     
     setBattleLog(prev => [logMessage, ...prev].slice(0, 5));
     
@@ -1001,6 +1051,9 @@ export default function WorkoutSession({
                     type="button"
                     onClick={() => {
                       onRewardRPG(xpGained, coinsGained, badgeGained);
+                      if (isVictory) {
+                        onUpdateQuestProgress('quest_boss', 1);
+                      }
                       setRewardsClaimed(true);
                       playBeep(880, 0.4);
                     }}

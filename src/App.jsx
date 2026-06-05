@@ -119,6 +119,39 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [rpgInventory, setRpgInventory] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_rpg_inventory');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [rpgEquipped, setRpgEquipped] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_rpg_equipped');
+    return saved ? JSON.parse(saved) : { weapon: null, armor: null, shield: null };
+  });
+
+  const [dailyQuests, setDailyQuests] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_rpg_quests');
+    const savedDate = localStorage.getItem('calisthenics_rpg_quests_date');
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (saved && savedDate === today) {
+      return JSON.parse(saved);
+    }
+    
+    const pool = [
+      { id: "quest_boss", text: "Kalahkan 1 Bos Pertarungan", target: 1, current: 0, rewardCoins: 40, rewardXp: 50, completed: false, claimed: false },
+      { id: "quest_reps", text: "Lakukan total 25 Repetisi Latihan", target: 25, current: 0, rewardCoins: 30, rewardXp: 30, completed: false, claimed: false },
+      { id: "quest_metronome", text: "Gunakan Metronom saat berlatih", target: 1, current: 0, rewardCoins: 15, rewardXp: 20, completed: false, claimed: false },
+      { id: "quest_pr", text: "Catat PR baru atau pertahankan rekor", target: 1, current: 0, rewardCoins: 35, rewardXp: 40, completed: false, claimed: false },
+      { id: "quest_water", text: "Catat log makanan/minuman hari ini", target: 1, current: 0, rewardCoins: 20, rewardXp: 20, completed: false, claimed: false }
+    ];
+    
+    const shuffled = pool.sort(() => 0.5 - Math.random()).slice(0, 3);
+    localStorage.setItem('calisthenics_rpg_quests', JSON.stringify(shuffled));
+    localStorage.setItem('calisthenics_rpg_quests_date', today);
+    return shuffled;
+  });
+
   const handleUpdatePR = (key, value) => {
     const updated = { ...personalRecords, [key]: Number(value) };
     setPersonalRecords(updated);
@@ -164,6 +197,109 @@ export default function App() {
       localStorage.setItem('calisthenics_rpg_bosses_defeated', updated.toString());
       return updated;
     });
+  };
+
+  // Sinkronisasi data inventory, equipped, dan quests ke LocalStorage
+  useEffect(() => {
+    localStorage.setItem('calisthenics_rpg_inventory', JSON.stringify(rpgInventory));
+  }, [rpgInventory]);
+
+  useEffect(() => {
+    localStorage.setItem('calisthenics_rpg_equipped', JSON.stringify(rpgEquipped));
+  }, [rpgEquipped]);
+
+  useEffect(() => {
+    localStorage.setItem('calisthenics_rpg_quests', JSON.stringify(dailyQuests));
+  }, [dailyQuests]);
+
+  const handleBuyItem = (item) => {
+    if (rpgCoins < item.cost) {
+      alert("Koin Anda tidak cukup!");
+      return false;
+    }
+    if (rpgInventory.some(inv => inv.id === item.id)) {
+      alert("Anda sudah memiliki item ini!");
+      return false;
+    }
+    setRpgCoins(prev => {
+      const updated = prev - item.cost;
+      localStorage.setItem('calisthenics_rpg_coins', updated.toString());
+      return updated;
+    });
+    setRpgInventory(prev => [...prev, item]);
+    return true;
+  };
+
+  const handleEquipItem = (item) => {
+    setRpgEquipped(prev => {
+      const updated = { ...prev };
+      if (item.type === 'weapon') updated.weapon = item;
+      if (item.type === 'armor') updated.armor = item;
+      if (item.type === 'shield') updated.shield = item;
+      return updated;
+    });
+  };
+
+  const handleUpdateQuestProgress = (questId, increment = 1) => {
+    setDailyQuests(prev => {
+      const updated = prev.map(q => {
+        if (q.id === questId && !q.completed) {
+          const nextCurrent = q.current + increment;
+          const isCompleted = nextCurrent >= q.target;
+          return {
+            ...q,
+            current: Math.min(nextCurrent, q.target),
+            completed: isCompleted
+          };
+        }
+        return q;
+      });
+      localStorage.setItem('calisthenics_rpg_quests', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleClaimQuestReward = (questId) => {
+    let coinsReward = 0;
+    let xpReward = 0;
+    
+    setDailyQuests(prev => {
+      const updated = prev.map(q => {
+        if (q.id === questId && q.completed && !q.claimed) {
+          coinsReward = q.rewardCoins;
+          xpReward = q.rewardXp;
+          return { ...q, claimed: true };
+        }
+        return q;
+      });
+      localStorage.setItem('calisthenics_rpg_quests', JSON.stringify(updated));
+      return updated;
+    });
+    
+    if (coinsReward > 0 || xpReward > 0) {
+      setRpgCoins(prev => {
+        const updated = prev + coinsReward;
+        localStorage.setItem('calisthenics_rpg_coins', updated.toString());
+        return updated;
+      });
+      
+      let nextXp = rpgXp + xpReward;
+      let nextLevel = rpgLevel;
+      let xpNeeded = nextLevel * 150;
+      
+      while (nextXp >= xpNeeded) {
+        nextXp -= xpNeeded;
+        nextLevel += 1;
+        xpNeeded = nextLevel * 150;
+      }
+      
+      setRpgLevel(nextLevel);
+      setRpgXp(nextXp);
+      localStorage.setItem('calisthenics_rpg_level', nextLevel.toString());
+      localStorage.setItem('calisthenics_rpg_xp', nextXp.toString());
+      
+      alert(`Berhasil menyelesaikan misi! Hadiah: +${coinsReward} Koin dan +${xpReward} XP! 🎉`);
+    }
   };
 
 
@@ -530,6 +666,8 @@ export default function App() {
             progressHistory={progressHistory}
             onReplaceJadwalExercise={handleReplaceJadwalExercise}
             onRewardRPG={handleRewardRPG}
+            rpgEquipped={rpgEquipped}
+            onUpdateQuestProgress={handleUpdateQuestProgress}
           />
         ) : (
           <>
@@ -564,6 +702,12 @@ export default function App() {
                 rpgCoins={rpgCoins}
                 rpgBossesDefeated={rpgBossesDefeated}
                 rpgBadges={rpgBadges}
+                rpgInventory={rpgInventory}
+                rpgEquipped={rpgEquipped}
+                dailyQuests={dailyQuests}
+                onBuyItem={handleBuyItem}
+                onEquipItem={handleEquipItem}
+                onClaimQuestReward={handleClaimQuestReward}
               />
             )}
             {activeTab === 'history' && (
