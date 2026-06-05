@@ -4,6 +4,7 @@ import { Database, CheckCircle, XCircle, RefreshCw, HelpCircle, Save, Flame } fr
 export default function Settings({ 
   webAppUrl, 
   setWebAppUrl, 
+  defaultUrl,
   onTestConnection, 
   connectionStatus, 
   loading,
@@ -18,8 +19,10 @@ export default function Settings({
   const [testResult, setTestResult] = useState(null);
 
   const handleSave = () => {
-    setWebAppUrl(urlInput);
-    localStorage.setItem('calisthenics_web_app_url', urlInput);
+    const trimmedUrl = urlInput.trim();
+    setUrlInput(trimmedUrl);
+    setWebAppUrl(trimmedUrl);
+    localStorage.setItem('calisthenics_web_app_url', trimmedUrl);
     
     setTargetCalories(Number(caloriesInput));
     localStorage.setItem('calisthenics_target_calories', caloriesInput);
@@ -30,13 +33,21 @@ export default function Settings({
     setTestResult({ type: 'success', message: 'Semua pengaturan & target berhasil disimpan!' });
   };
 
+  const handleResetToDefault = () => {
+    setUrlInput(defaultUrl);
+    setWebAppUrl(defaultUrl);
+    localStorage.setItem('calisthenics_web_app_url', defaultUrl);
+    setTestResult({ type: 'success', message: 'URL database berhasil direset ke bawaan default yang valid!' });
+  };
+
   const handleTest = async () => {
-    if (!urlInput) {
+    const trimmedUrl = urlInput.trim();
+    if (!trimmedUrl) {
       setTestResult({ type: 'error', message: 'Masukkan URL Web App terlebih dahulu!' });
       return;
     }
     setTestResult(null);
-    const success = await onTestConnection(urlInput);
+    const success = await onTestConnection(trimmedUrl);
     if (success) {
       setTestResult({ type: 'success', message: 'Koneksi ke Google Sheets Berhasil! Data jadwal & progress sinkron.' });
     } else {
@@ -111,19 +122,27 @@ export default function Settings({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <button
             onClick={handleSave}
-            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer"
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>Simpan URL</span>
+          </button>
+
+          <button
+            onClick={handleResetToDefault}
+            className="bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 font-medium py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Reset Bawaan</span>
           </button>
           
           <button
             onClick={handleTest}
             disabled={loading}
-            className="flex-1 bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer"
+            className="bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />

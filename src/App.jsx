@@ -25,7 +25,20 @@ export default function App() {
 
   // Load awal dari LocalStorage
   useEffect(() => {
-    const savedUrl = localStorage.getItem('calisthenics_web_app_url') || DEFAULT_URL;
+    let savedUrl = localStorage.getItem('calisthenics_web_app_url');
+    // Daftar URL lama yang bermasalah atau tidak sinkron
+    const legacyUrls = [
+      'https://script.google.com/macros/s/AKfycbwJkWVtCrxYeOUmW4XMmyv3Y4IH1J10eO8-8IXfS4FUuzkWRwDJ8MCSqkT8WTbaFidb/exec',
+      'https://script.google.com/macros/s/AKfycbz4iq4lG5VAIM5XueMSsVKj0Tw8mLNHVRI1Ij80qPsrf39797wmG468F6TiYDS-ucHN/exec'
+    ];
+    
+    // Migrasi otomatis ke link yang baru jika menggunakan link lama atau masih kosong
+    if (!savedUrl || legacyUrls.some(u => savedUrl.trim() === u)) {
+      savedUrl = DEFAULT_URL;
+      localStorage.setItem('calisthenics_web_app_url', DEFAULT_URL);
+    } else {
+      savedUrl = savedUrl.trim();
+    }
     setWebAppUrl(savedUrl);
 
     const savedProgress = localStorage.getItem('calisthenics_progress_history');
@@ -44,9 +57,10 @@ export default function App() {
   // Memuat data dari Google Sheets (GET)
   const loadDataFromSheets = async (url) => {
     if (!url) return;
+    const cleanUrl = url.trim();
     setLoading(true);
     try {
-      const response = await fetch(url);
+      const response = await fetch(cleanUrl);
       if (!response.ok) throw new Error("Gagal mengambil data dari Google Sheets");
       
       const data = await response.json();
@@ -73,9 +87,11 @@ export default function App() {
 
   // Tes Koneksi (dari menu Settings)
   const handleTestConnection = async (url) => {
+    if (!url) return false;
+    const cleanUrl = url.trim();
     setLoading(true);
     try {
-      const response = await fetch(url);
+      const response = await fetch(cleanUrl);
       if (!response.ok) throw new Error("Gagal menghubungi endpoint");
       
       const data = await response.json();
@@ -238,6 +254,7 @@ export default function App() {
               <Settings
                 webAppUrl={webAppUrl}
                 setWebAppUrl={setWebAppUrl}
+                defaultUrl={DEFAULT_URL}
                 onTestConnection={handleTestConnection}
                 connectionStatus={connectionStatus}
                 loading={loading}
