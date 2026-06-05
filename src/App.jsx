@@ -68,23 +68,7 @@ export default function App() {
     return localStorage.getItem('calisthenics_last_physique_update') || '';
   });
 
-  const [waterIntake, setWaterIntake] = useState(() => {
-    const saved = localStorage.getItem('calisthenics_water_intake');
-    const today = new Date().toISOString().split('T')[0];
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.date === today) {
-        return Number(parsed.amount || 0);
-      }
-    }
-    return 0;
-  });
 
-  const handleUpdateWater = (amount) => {
-    const today = new Date().toISOString().split('T')[0];
-    setWaterIntake(amount);
-    localStorage.setItem('calisthenics_water_intake', JSON.stringify({ date: today, amount }));
-  };
   
   // State untuk sesi aktif
   const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
@@ -401,8 +385,6 @@ export default function App() {
                 targetProtein={targetProtein}
                 weight={weight}
                 setWeight={handleUpdateWeight}
-                waterIntake={waterIntake}
-                onUpdateWater={handleUpdateWater}
                 height={height}
                 setHeight={(h) => {
                   setHeight(h);

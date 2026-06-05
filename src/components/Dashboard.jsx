@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2 } from 'lucide-react';
 
 export default function Dashboard({ 
@@ -14,12 +14,9 @@ export default function Dashboard({
   height,
   setHeight,
   lastPhysiqueUpdate,
-  setLastPhysiqueUpdate,
-  waterIntake = 0,
-  onUpdateWater
+  setLastPhysiqueUpdate
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
-  const lastClickRef = useRef(0);
   
   // State untuk form input task update BB/TB
   const [taskWeight, setTaskWeight] = useState(weight);
@@ -210,110 +207,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Hydration Tracker */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <span className="p-2 bg-blue-950/40 rounded-xl border border-blue-800/30 text-blue-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-              </svg>
-            </span>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-300">Pelacak Hidrasi Harian</h3>
-          </div>
-          <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-950/30 border border-blue-900/30 px-2.5 py-0.5 rounded-full">
-            {waterIntake} / 3000 ml
-          </span>
-        </div>
 
-        <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-          Konsumsi air minimal 3 liter (12 gelas) per hari untuk meminimalkan kram, memulihkan sendi/tendon, serta mendukung sintesis protein otot.
-        </p>
-
-        {/* Cup Grid */}
-        <div className="grid grid-cols-6 gap-2 pt-2">
-          {Array.from({ length: 12 }).map((_, index) => {
-            const cupVolume = (index + 1) * 250;
-            const isFilled = waterIntake >= cupVolume;
-            return (
-              <button
-                key={index}
-                onClick={() => {
-                  const now = Date.now();
-                  if (now - lastClickRef.current < 300) return;
-                  lastClickRef.current = now;
-                  
-                  let newAmount;
-                  if (!isFilled) {
-                    newAmount = cupVolume;
-                  } else {
-                    if (waterIntake === cupVolume) {
-                      newAmount = cupVolume - 250;
-                    } else {
-                      newAmount = cupVolume;
-                    }
-                  }
-                  onUpdateWater(newAmount);
-                }}
-                style={{ touchAction: 'manipulation' }}
-                className={`py-3.5 rounded-xl border flex flex-col items-center justify-center cursor-pointer active:scale-95 select-none ${
-                  isFilled
-                    ? 'bg-blue-950/30 border-blue-500/50 text-blue-400'
-                    : 'bg-zinc-950/40 border-zinc-850 text-zinc-600'
-                }`}
-                title={`${cupVolume} ml`}
-              >
-                <svg className="w-5 h-5" fill={isFilled ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a7 7 0 007-7c0-4.3-7-13-7-13S5 9.7 5 14a7 7 0 007 7z"></path>
-                </svg>
-                <span className="text-[8px] font-mono mt-1 font-bold">250ml</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Quick buttons */}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={() => {
-              const now = Date.now();
-              if (now - lastClickRef.current < 300) return;
-              lastClickRef.current = now;
-              onUpdateWater(Math.max(0, waterIntake - 250));
-            }}
-            style={{ touchAction: 'manipulation' }}
-            className="flex-1 bg-zinc-950/40 border border-zinc-850 text-zinc-400 hover:text-zinc-200 hover:border-zinc-800 font-semibold py-2 px-3 rounded-xl text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
-          >
-            <span>- 250ml</span>
-          </button>
-          <button
-            onClick={() => {
-              const now = Date.now();
-              if (now - lastClickRef.current < 300) return;
-              lastClickRef.current = now;
-              onUpdateWater(Math.min(3000, waterIntake + 250));
-            }}
-            style={{ touchAction: 'manipulation' }}
-            className="flex-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-bold py-2 px-3 rounded-xl text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
-          >
-            <span>+ 250ml</span>
-          </button>
-          <button
-            onClick={() => {
-              const now = Date.now();
-              if (now - lastClickRef.current < 300) return;
-              lastClickRef.current = now;
-              onUpdateWater(3000);
-            }}
-            style={{ touchAction: 'manipulation' }}
-            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-2 px-3.5 rounded-xl text-[11px] flex items-center justify-center cursor-pointer select-none"
-            title="Penuhi target langsung"
-          >
-            <span>Penuh</span>
-          </button>
-        </div>
-      </div>
 
       {/* Tugas Akhir Bulan: Update BB/TB */}
       {showPhysiqueTask && (
