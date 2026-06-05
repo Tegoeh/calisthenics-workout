@@ -244,13 +244,23 @@ export default function Dashboard({
                   if (now - lastClickRef.current < 300) return;
                   lastClickRef.current = now;
                   
-                  const newAmount = isFilled ? cupVolume - 250 : cupVolume;
+                  let newAmount;
+                  if (!isFilled) {
+                    newAmount = cupVolume;
+                  } else {
+                    if (waterIntake === cupVolume) {
+                      newAmount = cupVolume - 250;
+                    } else {
+                      newAmount = cupVolume;
+                    }
+                  }
                   onUpdateWater(newAmount);
                 }}
-                className={`py-3.5 rounded-xl border flex flex-col items-center justify-center transition cursor-pointer active:scale-95 ${
+                style={{ touchAction: 'manipulation' }}
+                className={`py-3.5 rounded-xl border flex flex-col items-center justify-center cursor-pointer active:scale-95 select-none ${
                   isFilled
                     ? 'bg-blue-950/30 border-blue-500/50 text-blue-400'
-                    : 'bg-zinc-950/40 border-zinc-850 text-zinc-600 hover:border-zinc-800'
+                    : 'bg-zinc-950/40 border-zinc-850 text-zinc-600'
                 }`}
                 title={`${cupVolume} ml`}
               >
@@ -272,7 +282,8 @@ export default function Dashboard({
               lastClickRef.current = now;
               onUpdateWater(Math.max(0, waterIntake - 250));
             }}
-            className="flex-1 bg-zinc-950/40 border border-zinc-850 text-zinc-400 hover:text-zinc-200 hover:border-zinc-800 font-semibold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer"
+            style={{ touchAction: 'manipulation' }}
+            className="flex-1 bg-zinc-950/40 border border-zinc-850 text-zinc-400 hover:text-zinc-200 hover:border-zinc-800 font-semibold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
           >
             <span>- 250ml</span>
           </button>
@@ -283,7 +294,8 @@ export default function Dashboard({
               lastClickRef.current = now;
               onUpdateWater(Math.min(3000, waterIntake + 250));
             }}
-            className="flex-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-bold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer"
+            style={{ touchAction: 'manipulation' }}
+            className="flex-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-bold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
           >
             <span>+ 250ml</span>
           </button>
@@ -294,7 +306,8 @@ export default function Dashboard({
               lastClickRef.current = now;
               onUpdateWater(3000);
             }}
-            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-2 px-3.5 rounded-xl transition text-[11px] flex items-center justify-center cursor-pointer"
+            style={{ touchAction: 'manipulation' }}
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-2 px-3.5 rounded-xl transition text-[11px] flex items-center justify-center cursor-pointer select-none"
             title="Penuhi target langsung"
           >
             <span>Penuh</span>
