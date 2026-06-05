@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, 
   VolumeX, ArrowLeft, FastForward, Mic, MicOff, Award, 
-  Sparkles, Weight, ArrowUpCircle, ArrowDownCircle, Coins, Shield
+  Sparkles, Weight, ArrowUpCircle, ArrowDownCircle, Coins, Shield, AlertTriangle
 } from 'lucide-react';
 import { 
   findExerciseInProgression, 
@@ -107,6 +107,8 @@ export default function WorkoutSession({
   const activeCameraRef = useRef(null);
   const activePoseRef = useRef(null);
   const poseStateRef = useRef('up');
+  const lastFormWarningTimeRef = useRef(0);
+  const [formWarningText, setFormWarningText] = useState("");
 
   // Automatic clean up camera on unmount
   useEffect(() => {
@@ -347,45 +349,98 @@ export default function WorkoutSession({
             canvasCtx.fill();
           };
 
+          // Hitung sudut kelurusan core (Shoulder -> Hip -> Knee) secara adaptif
+          const leftCoreVis = (leftShoulder?.visibility || 0) + (leftHip?.visibility || 0) + (leftKnee?.visibility || 0);
+          const rightCoreVis = (rightShoulder?.visibility || 0) + (rightHip?.visibility || 0) + (rightKnee?.visibility || 0);
+          
+          let coreAngle = 180;
+          if (leftCoreVis >= rightCoreVis) {
+            coreAngle = calculateAngle(leftShoulder, leftHip, leftKnee);
+          } else {
+            coreAngle = calculateAngle(rightShoulder, rightHip, rightKnee);
+          }
+
+          // Analisis form real-time (AI Coach Form Warnings)
+          const nowTime = performance.now();
+          const exNameLower = exName.toLowerCase();
+          let formWarning = "";
+          let isBadForm = false;
+
+          // Deteksi kelurusan core (Push-Up / Plank / Dips)
+          if (exNameLower.includes("pushup") || exNameLower.includes("push-up") || exNameLower.includes("plank") || exNameLower.includes("dips")) {
+            if (coreAngle < 155) {
+              isBadForm = true;
+              formWarning = "Kencangkan core Anda, pinggul kurang lurus!";
+            }
+          }
+          
+          // Deteksi Squat (Jangan membungkuk berlebihan)
+          if (exNameLower.includes("squat") || exNameLower.includes("lunge")) {
+            if (coreAngle < 85 && angle < 120) {
+              isBadForm = true;
+              formWarning = "Tegakkan dada Anda, jangan terlalu membungkuk!";
+            }
+          }
+
+          if (isBadForm && formWarning) {
+            if (nowTime - lastFormWarningTimeRef.current > 5000) {
+              lastFormWarningTimeRef.current = nowTime;
+              speakText(formWarning);
+              setFormWarningText(formWarning);
+              
+              setBattleLog(logPrev => [
+                `⚠️ AI Form Warning: ${formWarning}`,
+                ...logPrev
+              ].slice(0, 5));
+            }
+          } else {
+            if (formWarningText) {
+              setFormWarningText("");
+            }
+          }
+
+          const skeletonColor = isBadForm ? '#ef4444' : '#22c55e'; // Merah jika form salah, hijau jika benar
+          const jointsColor = isBadForm ? '#ef4444' : '#3b82f6';
+
           // Lengan Kiri (Shoulder - Elbow - Wrist)
-          drawLine(leftShoulder, leftElbow, '#06b6d4', 3);
-          drawLine(leftElbow, leftWrist, '#06b6d4', 3);
+          drawLine(leftShoulder, leftElbow, isBadForm ? '#ef4444' : '#06b6d4', 3);
+          drawLine(leftElbow, leftWrist, isBadForm ? '#ef4444' : '#06b6d4', 3);
 
           // Lengan Kanan (Shoulder - Elbow - Wrist)
-          drawLine(rightShoulder, rightElbow, '#06b6d4', 3);
-          drawLine(rightElbow, rightWrist, '#06b6d4', 3);
+          drawLine(rightShoulder, rightElbow, isBadForm ? '#ef4444' : '#06b6d4', 3);
+          drawLine(rightElbow, rightWrist, isBadForm ? '#ef4444' : '#06b6d4', 3);
 
           // Kaki Kiri (Hip - Knee - Ankle)
-          drawLine(leftHip, leftKnee, '#22c55e', 3);
-          drawLine(leftKnee, leftAnkle, '#22c55e', 3);
+          drawLine(leftHip, leftKnee, skeletonColor, 3);
+          drawLine(leftKnee, leftAnkle, skeletonColor, 3);
 
           // Kaki Kanan (Hip - Knee - Ankle)
-          drawLine(rightHip, rightKnee, '#22c55e', 3);
-          drawLine(rightKnee, rightAnkle, '#22c55e', 3);
+          drawLine(rightHip, rightKnee, skeletonColor, 3);
+          drawLine(rightKnee, rightAnkle, skeletonColor, 3);
 
           // Tubuh Kiri & Kanan (Shoulder - Hip)
-          drawLine(leftShoulder, leftHip, '#84cc16', 3);
-          drawLine(rightShoulder, rightHip, '#84cc16', 3);
+          drawLine(leftShoulder, leftHip, skeletonColor, 3);
+          drawLine(rightShoulder, rightHip, skeletonColor, 3);
 
           // Garis Bahu & Pinggul Penghubung Horizontal
-          drawLine(leftShoulder, rightShoulder, '#e11d48', 2.5);
-          drawLine(leftHip, rightHip, '#e11d48', 2.5);
+          drawLine(leftShoulder, rightShoulder, isBadForm ? '#ef4444' : '#e11d48', 2.5);
+          drawLine(leftHip, rightHip, isBadForm ? '#ef4444' : '#e11d48', 2.5);
 
           // Draw keypoints kiri
-          drawPoint(leftShoulder, '#a855f7', 4.5);
-          drawPoint(leftElbow, '#06b6d4', 5);
-          drawPoint(leftWrist, '#3b82f6', 5);
-          drawPoint(leftHip, '#84cc16', 4.5);
-          drawPoint(leftKnee, '#22c55e', 5);
-          drawPoint(leftAnkle, '#10b981', 5);
+          drawPoint(leftShoulder, isBadForm ? '#ef4444' : '#a855f7', 4.5);
+          drawPoint(leftElbow, isBadForm ? '#ef4444' : '#06b6d4', 5);
+          drawPoint(leftWrist, jointsColor, 5);
+          drawPoint(leftHip, skeletonColor, 4.5);
+          drawPoint(leftKnee, skeletonColor, 5);
+          drawPoint(leftAnkle, isBadForm ? '#ef4444' : '#10b981', 5);
 
           // Draw keypoints kanan
-          drawPoint(rightShoulder, '#a855f7', 4.5);
-          drawPoint(rightElbow, '#06b6d4', 5);
-          drawPoint(rightWrist, '#3b82f6', 5);
-          drawPoint(rightHip, '#84cc16', 4.5);
-          drawPoint(rightKnee, '#22c55e', 5);
-          drawPoint(rightAnkle, '#10b981', 5);
+          drawPoint(rightShoulder, isBadForm ? '#ef4444' : '#a855f7', 4.5);
+          drawPoint(rightElbow, isBadForm ? '#ef4444' : '#06b6d4', 5);
+          drawPoint(rightWrist, jointsColor, 5);
+          drawPoint(rightHip, skeletonColor, 4.5);
+          drawPoint(rightKnee, skeletonColor, 5);
+          drawPoint(rightAnkle, isBadForm ? '#ef4444' : '#10b981', 5);
         }
       });
 
@@ -1327,7 +1382,6 @@ export default function WorkoutSession({
         </div>
 
         {/* Video feed element & overlay skeleton canvas */}
-        {/* Video feed element & overlay skeleton canvas */}
         <div className={`relative w-full aspect-video bg-zinc-950 rounded-xl overflow-hidden border border-zinc-850 animate-fadeIn ${isCameraActive ? 'block' : 'hidden'}`}>
           <video
             id="ai-pose-video"
@@ -1343,6 +1397,14 @@ export default function WorkoutSession({
             height="270"
             className="w-full h-full object-cover transform scale-x-[-1]" 
           ></canvas>
+
+          {/* AI Form Warning Overlay */}
+          {formWarningText && (
+            <div className="absolute top-3 left-3 right-3 bg-red-950/90 border border-red-500/50 text-red-200 px-3 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.6)] animate-pulse z-10">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{formWarningText}</span>
+            </div>
+          )}
 
           {/* Live Angle Indicator */}
           <div className="absolute bottom-3 right-3 bg-zinc-950/80 border border-zinc-800 backdrop-blur-md px-3 py-1.5 rounded-lg flex flex-col items-center">
