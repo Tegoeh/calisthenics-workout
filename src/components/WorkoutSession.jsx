@@ -1,14 +1,46 @@
 import { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, VolumeX, ArrowLeft, FastForward, Mic, MicOff } from 'lucide-react';
+import { 
+  Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, 
+  VolumeX, ArrowLeft, FastForward, Mic, MicOff, Award, 
+  Sparkles, Weight, ArrowUpCircle, Coins, Shield
+} from 'lucide-react';
+import { 
+  findExerciseInProgression, 
+  mapExerciseToPRCategory 
+} from '../utils/progressionDb';
 
 export default function WorkoutSession({ 
   day, 
   workoutList, 
   onFinishWorkout, 
   onCancelWorkout, 
-  loading 
+  loading,
+  personalRecords = { pullup: 0, pushup: 0, dips: 0, lsit: 0, plank: 0, handstand: 0 },
+  onUpdatePR = () => {},
+  weight = 45,
+  weightHistory = [],
+  progressHistory = [],
+  onReplaceJadwalExercise = () => {},
+  onRewardRPG = () => {},
+  isDevMode = false
 }) {
   const [sessionPhase, setSessionPhase] = useState('warmup'); // 'warmup' | 'workout' | 'cooldown' | 'finish'
+
+  // RPG Boss Battle States
+  const BOSSES = [
+    { name: "Goblin", maxHp: 30, hp: 30, xpReward: 50, coinsReward: 20, badge: "Goblin Hunter", icon: "🔰", color: "bg-red-500" },
+    { name: "Troll", maxHp: 60, hp: 60, xpReward: 150, coinsReward: 50, badge: "Troll Slayer", icon: "👹", color: "bg-amber-600" },
+    { name: "Golem", maxHp: 100, hp: 100, xpReward: 300, coinsReward: 100, badge: "Golem Breaker", icon: "🗿", color: "bg-blue-600" },
+    { name: "Dragon", maxHp: 180, hp: 180, xpReward: 600, coinsReward: 250, badge: "Dragon Slayer", icon: "🐉", color: "bg-purple-600" }
+  ];
+
+  const [selectedBossIdx, setSelectedBossIdx] = useState(0);
+  const [bossHp, setBossHp] = useState(30);
+  const [battleLog, setBattleLog] = useState(["Pertarungan akan dimulai. Bersiaplah!"]);
+  const [customReps, setCustomReps] = useState({});
+  const [damageDealtTotal, setDamageDealtTotal] = useState(0);
+  const [rewardsClaimed, setRewardsClaimed] = useState(false);
+
   const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
@@ -17,6 +49,30 @@ export default function WorkoutSession({
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [notes, setNotes] = useState('');
   const [showDetails, setShowDetails] = useState(false);
+
+  // States untuk Auto-detect PR dan Up-level
+  const parseTargetReps = (repsString) => {
+    if (!repsString) return 10;
+    const matches = repsString.match(/\d+/g);
+    if (matches && matches.length > 0) {
+      const numbers = matches.map(Number);
+      return Math.max(...numbers);
+    }
+    return 10;
+  };
+
+  const [performanceData, setPerformanceData] = useState(() => {
+    const initial = {};
+    workoutList.forEach((ex, idx) => {
+      initial[idx] = parseTargetReps(ex.Reps);
+    });
+    return initial;
+  });
+
+  const [upgradedExercises, setUpgradedExercises] = useState({});
+  const [activeUpgradeInfo, setActiveUpgradeInfo] = useState(null);
+
+
 
   // State baru untuk Metronom Tempo Training
   const [isMetronomeEnabled, setIsMetronomeEnabled] = useState(false);
@@ -40,10 +96,275 @@ export default function WorkoutSession({
     }
   }
   
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [jointAngle, setJointAngle] = useState(180);
+  const [poseState, setPoseState] = useState('up');
+
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const activeCameraRef = useRef(null);
+  const activePoseRef = useRef(null);
+  const poseStateRef = useRef('up');
+
+  // Automatic clean up camera on unmount
+  useEffect(() => {
+    return () => {
+      if (activeCameraRef.current) {
+        try { activeCameraRef.current.stop(); } catch (err) { console.debug(err); }
+      }
+      if (activePoseRef.current) {
+        try { activePoseRef.current.close(); } catch (err) { console.debug(err); }
+      }
+      const fallbackVideo = document.getElementById('ai-pose-video-fallback');
+      if (fallbackVideo) {
+        try {
+          fallbackVideo.pause();
+          if (fallbackVideo.srcObject) {
+            const tracks = fallbackVideo.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+          }
+        } catch (err) {
+          console.debug(err);
+        }
+        fallbackVideo.remove();
+      }
+    };
+  }, []);
+
+  const calculateAngle = (a, b, c) => {
+    if (!a || !b || !c) return 180;
+    const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+    let angle = Math.abs((radians * 180.0) / Math.PI);
+    if (angle > 180.0) {
+      angle = 360.0 - angle;
+    }
+    return Math.round(angle);
+  };
+
+  const stopCameraTracker = () => {
+    if (activeCameraRef.current) {
+      try {
+        activeCameraRef.current.stop();
+      } catch (e) {
+        console.warn("Error stopping camera:", e);
+      }
+      activeCameraRef.current = null;
+    }
+    if (activePoseRef.current) {
+      try {
+        activePoseRef.current.close();
+      } catch (e) {
+        console.warn("Error closing pose model:", e);
+      }
+      activePoseRef.current = null;
+    }
+    setIsCameraActive(false);
+    setCameraLoading(false);
+
+    const fallbackVideo = document.getElementById('ai-pose-video-fallback');
+    if (fallbackVideo) {
+      try {
+        fallbackVideo.pause();
+        if (fallbackVideo.srcObject) {
+          const tracks = fallbackVideo.srcObject.getTracks();
+          tracks.forEach(track => track.stop());
+        }
+      } catch (err) {
+        console.debug("Error stopping fallback video tracks:", err);
+      }
+      fallbackVideo.remove();
+    }
+  };
+
+  const startCameraTracker = async () => {
+    if (typeof window.Pose === 'undefined' || typeof window.Camera === 'undefined') {
+      alert("Model AI Tracker MediaPipe sedang di-load oleh browser atau gagal dimuat. Harap tunggu beberapa detik atau pastikan koneksi internet Anda stabil.");
+      return;
+    }
+
+    setCameraLoading(true);
+    try {
+      const pose = new window.Pose({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+      });
+
+      pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        smoothSegmentation: false,
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.6
+      });
+
+      pose.onResults((results) => {
+        if (!canvasRef.current) return;
+        const canvasCtx = canvasRef.current.getContext('2d');
+        const width = canvasRef.current.width;
+        const height = canvasRef.current.height;
+
+        canvasCtx.clearRect(0, 0, width, height);
+
+        // Gambar video feed
+        canvasCtx.drawImage(results.image, 0, 0, width, height);
+
+        if (results.poseLandmarks) {
+          const landmarks = results.poseLandmarks;
+
+          const shoulder = landmarks[11];
+          const elbow = landmarks[13];
+          const wrist = landmarks[15];
+
+          const hip = landmarks[23];
+          const knee = landmarks[25];
+          const ankle = landmarks[27];
+
+          // Deteksi jenis latihan dari nama gerakan
+          const exName = activeExercise ? activeExercise.NamaGerakan.toLowerCase() : "";
+          const isLegs = exName.includes("squat") || exName.includes("lunge") || exName.includes("calf");
+
+          const angle = isLegs 
+            ? calculateAngle(hip, knee, ankle) 
+            : calculateAngle(shoulder, elbow, wrist);
+
+          setJointAngle(angle);
+
+          // State Machine Rep Counter
+          const limitDown = isLegs ? 115 : 100;
+          const limitUp = isLegs ? 155 : 145;
+
+          if (angle <= limitDown && poseStateRef.current === 'up') {
+            poseStateRef.current = 'down';
+            setPoseState('down');
+            playBeep(440, 0.05); // Bip pendek di posisi bawah
+          } else if (angle >= limitUp && poseStateRef.current === 'down') {
+            poseStateRef.current = 'up';
+            setPoseState('up');
+
+            // Naik reps! Update customReps secara dinamis
+            setCustomReps(prev => {
+              const currentVal = prev[repsKey] !== undefined ? prev[repsKey] : parseTargetReps(activeExercise.Reps);
+              const nextVal = currentVal + 1;
+
+              // Kurangi HP bos secara real-time!
+              setBossHp(bossPrev => Math.max(bossPrev - 1, 0));
+              setDamageDealtTotal(damagePrev => damagePrev + 1);
+
+              // Bunyikan beep sukses rep & voice feedback
+              playBeep(880, 0.1);
+              speakText(nextVal.toString());
+
+              // Tambahkan battle log pertempuran
+              const selectedBoss = BOSSES[selectedBossIdx];
+              setBattleLog(logPrev => [
+                `💥 Rep ke-${nextVal} ${activeExercise.NamaGerakan} mengenai ${selectedBoss.name}! (-1 HP)`,
+                ...logPrev
+              ].slice(0, 5));
+
+              return { ...prev, [repsKey]: nextVal };
+            });
+          }
+
+          // Gambar kerangka tubuh (skeleton) di canvas untuk interaktivitas RPG
+          const drawLine = (p1, p2, color = '#22c55e', w = 3) => {
+            if (!p1 || !p2) return;
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(p1.x * width, p1.y * height);
+            canvasCtx.lineTo(p2.x * width, p2.y * height);
+            canvasCtx.strokeStyle = color;
+            canvasCtx.lineWidth = w;
+            canvasCtx.stroke();
+          };
+
+          const drawPoint = (p, color = '#3b82f6', r = 4) => {
+            if (!p) return;
+            canvasCtx.beginPath();
+            canvasCtx.arc(p.x * width, p.y * height, r, 0, 2 * Math.PI);
+            canvasCtx.fillStyle = color;
+            canvasCtx.fill();
+          };
+
+          // Lengan (Shoulder - Elbow - Wrist)
+          drawLine(shoulder, elbow, '#06b6d4', 3);
+          drawLine(elbow, wrist, '#06b6d4', 3);
+
+          // Kaki (Hip - Knee - Ankle)
+          drawLine(hip, knee, '#22c55e', 3);
+          drawLine(knee, ankle, '#22c55e', 3);
+
+          // Tubuh (Shoulder - Hip)
+          drawLine(shoulder, hip, '#84cc16', 3);
+
+          // Draw keypoints
+          drawPoint(shoulder, '#a855f7', 5);
+          drawPoint(elbow, '#06b6d4', 6);
+          drawPoint(wrist, '#3b82f6', 6);
+          drawPoint(hip, '#84cc16', 5);
+          drawPoint(knee, '#22c55e', 6);
+          drawPoint(ankle, '#10b981', 6);
+        }
+      });
+
+      activePoseRef.current = pose;
+
+      // Cari/tentukan video element secara dinamis untuk mencegah TypeError srcObject null
+      let videoElement = videoRef.current;
+      if (!videoElement) {
+        videoElement = document.getElementById('ai-pose-video');
+      }
+      if (!videoElement) {
+        videoElement = document.querySelector('video');
+      }
+      if (!videoElement) {
+        console.warn("Video element not found. Creating dynamic fallback video element...");
+        videoElement = document.createElement('video');
+        videoElement.id = 'ai-pose-video-fallback';
+        videoElement.setAttribute('playsinline', 'true');
+        videoElement.muted = true;
+        videoElement.style.position = 'absolute';
+        videoElement.style.width = '1px';
+        videoElement.style.height = '1px';
+        videoElement.style.opacity = '0';
+        videoElement.style.pointerEvents = 'none';
+        document.body.appendChild(videoElement);
+      }
+
+      // Start webcam stream
+      const camera = new window.Camera(videoElement, {
+        onFrame: async () => {
+          if (videoElement && activePoseRef.current) {
+            try {
+              await activePoseRef.current.send({ image: videoElement });
+            } catch (err) {
+              console.debug("Error sending frame to pose model:", err);
+            }
+          }
+        },
+        width: 480,
+        height: 360
+      });
+
+      activeCameraRef.current = camera;
+      await camera.start();
+      setIsCameraActive(true);
+      setCameraLoading(false);
+      speakText("Kamera pelacak AI aktif. Silakan posisikan tubuh Anda.");
+    } catch (err) {
+      console.error("Gagal mengaktifkan kamera pelacak:", err);
+      alert("Gagal mengakses kamera. Pastikan Anda memberikan izin akses kamera ke browser.");
+      stopCameraTracker();
+    }
+  };
+
   const timerRef = useRef(null);
   
   const activeExercise = workoutList[currentExerciseIdx];
   const totalExercises = workoutList.length;
+
+  // Derive reps aktual untuk set saat ini secara dinamis (bebas dari useEffect cascading render)
+  const repsKey = `${currentExerciseIdx}-${currentSet}`;
+  const currentRepsValue = activeExercise ? (customReps[repsKey] !== undefined ? customReps[repsKey] : parseTargetReps(activeExercise.Reps)) : 10;
 
   const warmupItems = [
     {
@@ -202,8 +523,18 @@ export default function WorkoutSession({
   }, [sessionPhase, isResting, isMetronomeEnabled, tempoEccentric, tempoIsometricBottom, tempoConcentric, tempoIsometricTop]);
 
   const handleFinishSet = () => {
-    // Bunyikan beep saat set selesai
     playBeep(660, 0.15);
+    
+    // Kurangi HP bos berdasarkan currentRepsValue
+    const damage = Number(currentRepsValue || 0);
+    setBossHp(prev => Math.max(prev - damage, 0));
+    setDamageDealtTotal(prev => prev + damage);
+    
+    // Tambahkan battle log
+    const selectedBoss = BOSSES[selectedBossIdx];
+    const logMessage = `💥 Boom! Anda menyerang ${selectedBoss.name} dengan ${activeExercise.NamaGerakan} sebanyak ${damage} reps!`;
+    
+    setBattleLog(prev => [logMessage, ...prev].slice(0, 5));
     
     // Tentukan waktu istirahat (default ke 60 jika tidak disetel)
     const restDuration = parseInt(activeExercise.Istirahat) || 60;
@@ -218,6 +549,18 @@ export default function WorkoutSession({
   };
 
   const handleSaveWorkout = () => {
+    // Simpan PR baru secara otomatis jika performa yang dicapai melebihi PR lama
+    workoutList.forEach((ex, idx) => {
+      const prCategory = mapExerciseToPRCategory(ex.NamaGerakan);
+      if (prCategory) {
+        const perfVal = Number(performanceData[idx] || 0);
+        const oldPR = Number(personalRecords[prCategory] || 0);
+        if (perfVal > oldPR) {
+          onUpdatePR(prCategory, perfVal);
+        }
+      }
+    });
+
     onFinishWorkout(day, notes);
   };
 
@@ -265,9 +608,49 @@ export default function WorkoutSession({
             ))}
           </div>
 
+          {/* RPG BOSS SELECT PANEL */}
+          <div className="bg-zinc-950/40 border border-zinc-850 rounded-2xl p-4.5 space-y-3 text-left">
+            <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">⚔️ TANTANG BOS WORKOUT RPG</span>
+            <p className="text-[11px] text-zinc-500 font-sans leading-relaxed">
+              Pilih bos yang ingin Anda lawan hari ini. Selesaikan repetisi set latihan Anda untuk memberikan damage dan mengalahkan bos!
+            </p>
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              {BOSSES.map((boss, idx) => (
+                <button
+                  type="button"
+                  key={idx}
+                  onClick={() => {
+                    setSelectedBossIdx(idx);
+                    setBossHp(boss.maxHp);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer relative overflow-hidden flex flex-col justify-between h-20 select-none ${
+                    selectedBossIdx === idx 
+                      ? 'bg-amber-950/15 border-amber-500/40 text-zinc-100' 
+                      : 'bg-zinc-900/40 border-zinc-850 text-zinc-400 hover:border-zinc-800'
+                  }`}
+                >
+                  <div className="flex justify-between items-start w-full">
+                    <span className="text-xl">{boss.icon}</span>
+                    <span className="text-[8px] bg-zinc-950/60 border border-zinc-850 px-2 py-0.5 rounded font-mono font-bold text-zinc-400">
+                      HP: {boss.maxHp}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-black block leading-none">{boss.name}</span>
+                    <span className="text-[9px] text-amber-400 font-medium font-sans mt-1 block">
+                      +{boss.xpReward} XP / +{boss.coinsReward} C
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={() => {
               playBeep(660, 0.2);
+              // Set awal HP Bos saat latihan dimulai
+              setBossHp(BOSSES[selectedBossIdx].maxHp);
               setSessionPhase('workout');
             }}
             className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-extrabold py-4 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow-lg active:scale-[0.98]"
@@ -334,9 +717,14 @@ export default function WorkoutSession({
 
   // 3. Tampilan Layar Selesai (Simpan Hasil)
   if (sessionPhase === 'finish') {
+    // Hitung sesi terselesaikan untuk hari ini
+    const sessionCount = progressHistory.filter(h => h.HariWorkout === day && h.Status === "Selesai").length + 1; // tambah 1 untuk sesi saat ini
+    const initialWeight = weightHistory && weightHistory.length > 0 ? Number(weightHistory[0].weight) : weight;
+    const weightDiff = Number((weight - initialWeight).toFixed(1));
+
     return (
       <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden space-y-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 text-center shadow-2xl relative overflow-hidden space-y-6">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-lime-500/10 rounded-full blur-3xl"></div>
           
           <div className="w-20 h-20 bg-lime-950/40 border-2 border-lime-400 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-lime-500/10 scale-110 transition duration-500">
@@ -349,6 +737,214 @@ export default function WorkoutSession({
               Kerja bagus! Sesi pemanasan, latihan inti, dan pendinginan telah diselesaikan secara lengkap hari ini.
             </p>
           </div>
+
+          {/* Input Reps Aktual & Deteksi PR Otomatis */}
+          <div className="space-y-3.5 text-left border-t border-b border-zinc-800/80 py-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center space-x-1.5">
+              <Award className="w-4 h-4 text-lime-400" />
+              <span>Verifikasi Repetisi & Rekor Pribadi</span>
+            </h3>
+            <p className="text-[11px] text-zinc-500 font-sans leading-relaxed">
+              Masukkan reps atau durasi (detik) maksimal yang berhasil Anda selesaikan di set terbaik hari ini untuk mendeteksi Rekor Pribadi (PR) baru secara otomatis.
+            </p>
+
+            <div className="space-y-2.5 pt-1">
+              {workoutList.map((ex, idx) => {
+                const prCategory = mapExerciseToPRCategory(ex.NamaGerakan);
+                const currentVal = Number(performanceData[idx] || 0);
+                const oldPR = prCategory ? Number(personalRecords?.[prCategory] || 0) : 0;
+                const isNewPR = prCategory && currentVal > oldPR;
+                
+                // Cari apakah ada level berikutnya di progressionDb
+                const progInfo = findExerciseInProgression(ex.NamaGerakan);
+                const hasNextLevel = progInfo && progInfo.next;
+                const isUpgraded = upgradedExercises[ex.NamaGerakan];
+
+                const isDuration = ex.Reps.toLowerCase().includes('detik') || ex.Reps.toLowerCase().includes('second') || ex.Reps.toLowerCase().includes('hang') || ex.Reps.toLowerCase().includes('hold');
+
+                return (
+                  <div key={idx} className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-zinc-200 block">{ex.NamaGerakan}</span>
+                      <div className="flex items-center space-x-2 text-[10px] text-zinc-500 font-mono">
+                        <span>Target: {ex.Reps}</span>
+                        {prCategory && <span>• PR Lama: {oldPR} {isDuration ? 'detik' : 'reps'}</span>}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                      {/* Live PR Badge */}
+                      {isNewPR && (
+                        <span className="bg-lime-950/40 text-lime-400 border border-lime-800/40 text-[9px] font-extrabold px-2 py-0.5 rounded-md animate-pulse uppercase tracking-wider flex items-center space-x-1 shrink-0">
+                          <Sparkles className="w-2.5 h-2.5 fill-current" />
+                          <span>PR Baru!</span>
+                        </span>
+                      )}
+
+                      {/* Upgrade/Terlalu Mudah Button */}
+                      {hasNextLevel && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isUpgraded) return;
+                            setActiveUpgradeInfo({
+                              oldName: ex.NamaGerakan,
+                              nextName: progInfo.next.name,
+                              desc: progInfo.next.desc,
+                              categoryName: progInfo.categoryName
+                            });
+                          }}
+                          className={`text-[10px] px-2 py-1.5 rounded-lg border font-bold flex items-center space-x-1.5 transition cursor-pointer select-none ${
+                            isUpgraded
+                              ? 'bg-lime-950/20 border-lime-800/30 text-lime-400 cursor-default'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-lime-400 hover:border-lime-900/50'
+                          }`}
+                          title={isUpgraded ? `Telah dinaikkan kesulitan ke ${isUpgraded}` : "Gerakan terasa terlalu mudah? Klik untuk naik level kesulitan"}
+                        >
+                          <ArrowUpCircle className="w-3.5 h-3.5" />
+                          <span>{isUpgraded ? 'Up Leveled' : 'Terlalu Mudah?'}</span>
+                        </button>
+                      )}
+
+                      {/* Input Performance */}
+                      <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={performanceData[idx] || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setPerformanceData(prev => ({ ...prev, [idx]: val }));
+                          }}
+                          className="w-10 bg-transparent text-center text-xs font-bold text-zinc-100 focus:outline-none"
+                        />
+                        <span className="text-[10px] text-zinc-500 font-medium ml-1">
+                          {isDuration ? 'dtk' : 'rep'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Panel AI Insights & Rekomendasi Progresi */}
+          <div className="bg-zinc-950/50 border border-zinc-850 rounded-2xl p-4 text-left space-y-3">
+            <div className="flex items-center space-x-2 text-lime-400 border-b border-zinc-900 pb-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">AI Insights & Rekomendasi</span>
+            </div>
+            
+            <div className="space-y-3.5 text-[11px] leading-relaxed font-sans text-zinc-400">
+              {/* Konsistensi */}
+              <div className="flex items-start space-x-2">
+                <div className="w-5 h-5 rounded-full bg-cyan-950/40 text-cyan-400 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5 font-mono">
+                  {sessionCount}
+                </div>
+                <div>
+                  <p className="text-zinc-200 font-semibold leading-none">Konsistensi Hari {day}: {sessionCount} Sesi</p>
+                  <p className="text-zinc-400 mt-1">
+                    {sessionCount >= 6 
+                      ? "Anda telah menyelesaikan 6+ sesi di hari ini. Tubuh Anda dipastikan sudah teradaptasi dengan baik. Sangat disarankan menaikkan tingkat kesulitan gerakan (progresi) jika target reps saat ini terasa ringan!"
+                      : `Selesaikan ${6 - sessionCount} sesi lagi di hari ${day} untuk mencapai fase adaptasi kekuatan & tendon sebelum disarankan menaikkan level kesulitan.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* BB Ektomorf */}
+              <div className="flex items-start space-x-2 border-t border-zinc-900 pt-3">
+                <Weight className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-zinc-200 font-semibold leading-none">
+                    Analisis BB Ektomorf: {weight} kg {weightDiff > 0 ? `(+${weightDiff} kg)` : weightDiff < 0 ? `(${weightDiff} kg)` : '(Stabil)'}
+                  </p>
+                  <p className="text-zinc-400 mt-1">
+                    {weightDiff > 0 
+                      ? `Selamat! Berat badan Anda meningkat +${weightDiff} kg dari awal latihan (${initialWeight} kg). Untuk tipe tubuh ektomorf, ini pertanda baik kenaikan massa otot. Ingat, beban calisthenics (bodyweight) Anda kini bertambah secara alami. Jika gerakan terasa berat, itu normal; tetapi jika Anda tetap kuat mencapai target reps, kekuatan murni Anda bertambah pesat!`
+                      : "Berat badan Anda saat ini stabil. Bagi ektomorf yang ingin meningkatkan massa otot (bulking), sangat penting memicu progressive overload (naik level gerakan / tambah reps) dipadukan dengan surplus kalori yang terpantau di tab Gizi AI."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RPG BOSS BATTLE RESULTS */}
+          {(() => {
+            const boss = BOSSES[selectedBossIdx];
+            const isVictory = bossHp === 0;
+            const xpGained = isVictory ? boss.xpReward : Math.round(boss.xpReward * 0.4);
+            const coinsGained = isVictory ? boss.coinsReward : Math.round(boss.coinsReward * 0.4);
+            const badgeGained = isVictory ? boss.badge : null;
+
+            return (
+              <div className="bg-zinc-950/50 border border-zinc-850 rounded-2xl p-5 text-left space-y-4 relative overflow-hidden">
+                {isVictory ? (
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-lime-500/5 rounded-full blur-2xl"></div>
+                ) : (
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl"></div>
+                )}
+
+                <div className="flex items-center space-x-2.5">
+                  <span className="text-3xl">{isVictory ? '🏆' : '💨'}</span>
+                  <div>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Hasil Pertarungan RPG</span>
+                    <h3 className={`text-sm font-black uppercase tracking-wide leading-none mt-1 ${isVictory ? 'text-lime-400' : 'text-zinc-400'}`}>
+                      {isVictory ? `${boss.name} SLAIN!` : `${boss.name} MELARIKAN DIRI`}
+                    </h3>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">
+                  {isVictory 
+                    ? `Luar biasa! Anda berhasil memberikan total ${damageDealtTotal} damage dan mengalahkan ${boss.name}. Klaim hadiah pertempuran Anda sekarang!`
+                    : `Anda telah memberikan total ${damageDealtTotal} damage. Namun ${boss.name} berhasil melarikan diri dengan ${bossHp} HP tersisa. Ambil hadiah hiburan atas perjuangan Anda!`}
+                </p>
+
+                {/* Rewards List */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="bg-zinc-900/80 border border-zinc-850 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 font-mono text-xs font-bold text-amber-300">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>+{xpGained} XP</span>
+                  </div>
+                  <div className="bg-zinc-900/80 border border-zinc-850 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 font-mono text-xs font-bold text-amber-400">
+                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                    <span>+{coinsGained} Koin</span>
+                  </div>
+                  {isVictory && badgeGained && (
+                    <div className="bg-zinc-900/80 border border-zinc-850 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 font-mono text-xs font-bold text-lime-400">
+                      <Shield className="w-3.5 h-3.5 text-lime-400" />
+                      <span>Lencana: {badgeGained}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Claim Button */}
+                {!rewardsClaimed ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRewardRPG(xpGained, coinsGained, badgeGained);
+                      setRewardsClaimed(true);
+                      playBeep(880, 0.4);
+                    }}
+                    className={`w-full py-2.5 rounded-xl font-extrabold text-xs transition cursor-pointer text-center flex items-center justify-center space-x-2 ${
+                      isVictory 
+                        ? 'bg-gradient-to-r from-amber-500 to-lime-500 hover:from-amber-400 hover:to-lime-400 text-zinc-950' 
+                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                    }`}
+                  >
+                    <span>{isVictory ? 'Klaim Hadiah Kemenangan 🎁' : 'Ambil Hadiah Hiburan 🎁'}</span>
+                  </button>
+                ) : (
+                  <div className="bg-lime-950/20 border border-lime-900/30 text-lime-400 font-extrabold text-xs py-2.5 rounded-xl text-center flex items-center justify-center space-x-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-lime-400" />
+                    <span>Hadiah RPG Berhasil Diklaim! 🏆</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Form Catatan */}
           <div className="space-y-2 text-left pt-2">
@@ -367,7 +963,7 @@ export default function WorkoutSession({
           <button
             onClick={handleSaveWorkout}
             disabled={loading}
-            className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-3.5 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-lime-500/10"
+            className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-3.5 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-lime-500/10 active:scale-[0.99]"
           >
             {loading ? (
               <RefreshCw className="w-5 h-5 animate-spin" />
@@ -377,6 +973,60 @@ export default function WorkoutSession({
             <span>Simpan Progress Latihan</span>
           </button>
         </div>
+
+        {/* Modal Overlay Upgrade Level */}
+        {activeUpgradeInfo && (
+          <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-left relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-lime-500"></div>
+              
+              <div className="flex items-center space-x-2 pb-2 border-b border-zinc-800">
+                <ArrowUpCircle className="w-5 h-5 text-lime-400 animate-pulse" />
+                <h3 className="font-bold text-sm text-zinc-100">Upgrade Level Kesulitan</h3>
+              </div>
+              
+              <div className="space-y-3 text-xs leading-relaxed font-sans text-zinc-350">
+                <p>
+                  Apakah Anda ingin menaikkan tingkat kesulitan gerakan ini?
+                </p>
+                <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">{activeUpgradeInfo.categoryName}</span>
+                    <span className="text-[9px] bg-lime-950/30 text-lime-400 border border-lime-800/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Level Up</span>
+                  </div>
+                  <h4 className="font-extrabold text-sm text-zinc-100">{activeUpgradeInfo.nextName}</h4>
+                  <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">{activeUpgradeInfo.desc}</p>
+                </div>
+                <p className="text-zinc-500 text-[10px] leading-relaxed">
+                  Menyetujui akan mengubah gerakan <span className="text-zinc-300 font-semibold">{activeUpgradeInfo.oldName}</span> di jadwal latihan hari <span className="text-zinc-300 font-semibold">{day}</span> secara permanen.
+                </p>
+              </div>
+
+              <div className="flex space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const success = onReplaceJadwalExercise(activeUpgradeInfo.oldName, activeUpgradeInfo.nextName);
+                    if (success) {
+                      setUpgradedExercises(prev => ({ ...prev, [activeUpgradeInfo.oldName]: activeUpgradeInfo.nextName }));
+                    }
+                    setActiveUpgradeInfo(null);
+                  }}
+                  className="flex-1 bg-lime-500 hover:bg-lime-400 text-zinc-950 font-extrabold py-2.5 rounded-xl transition text-xs cursor-pointer text-center"
+                >
+                  Upgrade Sekarang
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveUpgradeInfo(null)}
+                  className="px-4 bg-zinc-850 hover:bg-zinc-800 text-zinc-350 py-2.5 rounded-xl transition text-xs font-semibold cursor-pointer border border-zinc-800"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -451,6 +1101,153 @@ export default function WorkoutSession({
             className="h-full bg-lime-500 rounded-full transition-all duration-300"
             style={{ width: `${progressPercent || 5}%` }}
           ></div>
+        </div>
+      </div>
+
+      {/* RPG ACTIVE BOSS BATTLE PANEL */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4.5 shadow-xl space-y-3 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl"></div>
+        
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <span className="text-2xl">{BOSSES[selectedBossIdx].icon}</span>
+            <div>
+              <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Target Bos</span>
+              <h3 className="text-xs font-black text-zinc-150 leading-none mt-0.5 uppercase tracking-wide">
+                {BOSSES[selectedBossIdx].name}
+              </h3>
+            </div>
+          </div>
+          <span className="text-xs font-bold font-mono text-rose-400">
+            {bossHp} / {BOSSES[selectedBossIdx].maxHp} HP
+          </span>
+        </div>
+
+        {/* HP Bar */}
+        <div className="w-full h-2 bg-zinc-950 border border-zinc-850 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-rose-600 rounded-full transition-all duration-300 shadow-md shadow-rose-500/20"
+            style={{ width: `${(bossHp / BOSSES[selectedBossIdx].maxHp) * 100}%` }}
+          ></div>
+        </div>
+
+        {/* Battle Log */}
+        <div className="bg-zinc-950/40 border border-zinc-850 rounded-lg p-2 font-mono text-[9px] text-zinc-500 space-y-0.5">
+          {battleLog.map((log, lIdx) => (
+            <p key={lIdx} className={lIdx === 0 ? 'text-lime-400 font-semibold' : ''}>
+              {log}
+            </p>
+          ))}
+        </div>
+
+        {/* DEV CHEATS */}
+        {isDevMode && (
+          <div className="flex space-x-2 pt-1.5 border-t border-zinc-850/30">
+            <button
+              type="button"
+              onClick={() => {
+                setBossHp(0);
+                playBeep(880, 0.3);
+                setBattleLog(prev => ["⚡ CHEAT: Bos berhasil dikalahkan secara instan!", ...prev].slice(0, 5));
+              }}
+              className="flex-1 bg-red-950/30 border border-red-900/40 text-red-400 text-[8px] font-bold py-1 rounded-lg transition text-center cursor-pointer select-none"
+            >
+              ☠️ Instakill Boss
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomReps(prev => {
+                  const currentVal = prev[repsKey] !== undefined ? prev[repsKey] : parseTargetReps(activeExercise.Reps);
+                  const nextVal = currentVal + 1;
+                  setBossHp(bossPrev => Math.max(bossPrev - 1, 0));
+                  setDamageDealtTotal(damagePrev => damagePrev + 1);
+                  playBeep(700, 0.05);
+                  
+                  const selectedBoss = BOSSES[selectedBossIdx];
+                  setBattleLog(logPrev => [
+                    `⚡ CHEAT: Rep ke-${nextVal} ${activeExercise.NamaGerakan} mengenai ${selectedBoss.name}!`,
+                    ...logPrev
+                  ].slice(0, 5));
+
+                  return { ...prev, [repsKey]: nextVal };
+                });
+              }}
+              className="flex-1 bg-lime-950/20 border border-lime-900/30 text-lime-400 text-[8px] font-bold py-1 rounded-lg transition text-center cursor-pointer select-none"
+            >
+              ⚡ Cheat +1 Rep
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* AI WEBCAM TRACKER SYSTEM */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4.5 shadow-xl space-y-3 relative overflow-hidden">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">📷</span>
+            <div>
+              <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Real-time Tracker</span>
+              <h3 className="text-xs font-black text-zinc-150 leading-none mt-0.5 uppercase tracking-wide">
+                AI Reps & Pose Detector
+              </h3>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={isCameraActive ? stopCameraTracker : startCameraTracker}
+            disabled={cameraLoading}
+            className={`text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-xl border transition cursor-pointer select-none ${
+              isCameraActive 
+                ? 'bg-red-950/20 border-red-900/40 text-red-400' 
+                : 'bg-lime-950/20 border-lime-800/40 text-lime-400 hover:bg-lime-950/30'
+            }`}
+          >
+            {cameraLoading ? (
+              <span className="flex items-center space-x-1">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                <span>Memuat AI...</span>
+              </span>
+            ) : isCameraActive ? (
+              'Matikan Kamera'
+            ) : (
+              'Aktifkan Kamera'
+            )}
+          </button>
+        </div>
+
+        {/* Video feed element & overlay skeleton canvas */}
+        {/* Video feed element & overlay skeleton canvas */}
+        <div className={`relative w-full aspect-video bg-zinc-950 rounded-xl overflow-hidden border border-zinc-850 animate-fadeIn ${isCameraActive ? 'block' : 'hidden'}`}>
+          <video
+            id="ai-pose-video"
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full object-cover hidden"
+            playsInline
+            muted
+          ></video>
+          
+          <canvas
+            ref={canvasRef}
+            width="480"
+            height="270"
+            className="w-full h-full object-cover transform scale-x-[-1]" 
+          ></canvas>
+
+          {/* Live Angle Indicator */}
+          <div className="absolute bottom-3 right-3 bg-zinc-950/80 border border-zinc-800 backdrop-blur-md px-3 py-1.5 rounded-lg flex flex-col items-center">
+            <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider font-sans">Sudut Sendi</span>
+            <span className="text-xs font-black text-lime-400 font-mono mt-0.5">{jointAngle}°</span>
+          </div>
+          
+          {/* Pose State Indicator */}
+          <div className="absolute bottom-3 left-3 bg-zinc-950/80 border border-zinc-800 backdrop-blur-md px-3 py-1.5 rounded-lg flex flex-col items-center">
+            <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider font-sans">Fase Form</span>
+            <span className="text-xs font-black text-cyan-400 font-mono mt-0.5 uppercase font-sans">
+              {poseState === 'down' ? '⬇️ Flexion' : '⬆️ Extension'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -618,14 +1415,33 @@ export default function WorkoutSession({
             )}
           </div>
 
-          {/* Action Button */}
-          <button
-            onClick={handleFinishSet}
-            className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-4 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow-lg shadow-lime-500/5 hover:shadow-lime-500/10 active:scale-[0.98]"
-          >
-            <Play className="w-4 h-4 fill-current" />
-            <span>Selesaikan Set {currentSet}</span>
-          </button>
+          {/* Action Button & Reps Input */}
+          <div className="flex items-center space-x-3">
+            {/* Input Reps Aktual Set Ini */}
+            <div className="flex flex-col space-y-1 shrink-0">
+              <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider text-center">Reps Set Ini</span>
+              <div className="flex items-center bg-zinc-950 border border-zinc-850 rounded-xl px-2.5 py-2 w-20">
+                <input
+                  type="number"
+                  min="0"
+                  value={currentRepsValue}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setCustomReps(prev => ({ ...prev, [repsKey]: val }));
+                  }}
+                  className="w-full bg-transparent text-center text-xs font-bold text-zinc-100 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleFinishSet}
+              className="flex-1 bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-4 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow-lg shadow-lime-500/5 hover:shadow-lime-500/10 active:scale-[0.98]"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>Selesaikan Set {currentSet}</span>
+            </button>
+          </div>
         </div>
       ) : (
         /* REST TIMER MODAL IN-PLACE */

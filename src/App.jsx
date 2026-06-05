@@ -7,6 +7,7 @@ import CalisthenicsGuide from './components/CalisthenicsGuide';
 import Settings from './components/Settings';
 import MealTracker from './components/MealTracker';
 import { DEFAULT_JADWAL } from './utils/mockData';
+import { PROGRESSION_DATABASE, generateDefaultLangkah } from './utils/progressionDb';
 
 export default function App() {
   const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxstiZ_TZF4h03jXIG5oUvcrPC4Q1KmhJuOnPDr9iZJ0OG87A0I4zFvrpJ2Xp0OCYej/exec';
@@ -25,7 +26,15 @@ export default function App() {
     return saved.trim();
   });
 
-  const [jadwal, setJadwal] = useState(DEFAULT_JADWAL);
+  const [jadwal, setJadwal] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_jadwal');
+    return saved ? JSON.parse(saved) : DEFAULT_JADWAL;
+  });
+
+  // Sinkronisasi jadwal ke LocalStorage jika berubah
+  useEffect(() => {
+    localStorage.setItem('calisthenics_jadwal', JSON.stringify(jadwal));
+  }, [jadwal]);
   const [progressHistory, setProgressHistory] = useState(() => {
     const saved = localStorage.getItem('calisthenics_progress_history');
     return saved ? JSON.parse(saved) : [];
@@ -92,10 +101,166 @@ export default function App() {
     return null;
   });
 
+  // State RPG
+  const [rpgLevel, setRpgLevel] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_rpg_level') || '1');
+  });
+  const [rpgXp, setRpgXp] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_rpg_xp') || '0');
+  });
+  const [rpgCoins, setRpgCoins] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_rpg_coins') || '0');
+  });
+  const [rpgBossesDefeated, setRpgBossesDefeated] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_rpg_bosses_defeated') || '0');
+  });
+  const [rpgBadges, setRpgBadges] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_rpg_badges');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [isDevMode, setIsDevMode] = useState(() => {
+    return localStorage.getItem('calisthenics_dev_mode') === 'true';
+  });
+
   const handleUpdatePR = (key, value) => {
     const updated = { ...personalRecords, [key]: Number(value) };
     setPersonalRecords(updated);
     localStorage.setItem('calisthenics_personal_records', JSON.stringify(updated));
+  };
+
+  const handleRewardRPG = (xpGained, coinsGained, newBadge = null) => {
+    let nextXp = rpgXp + xpGained;
+    let nextLevel = rpgLevel;
+    let xpNeeded = nextLevel * 150;
+    
+    while (nextXp >= xpNeeded) {
+      nextXp -= xpNeeded;
+      nextLevel += 1;
+      xpNeeded = nextLevel * 150;
+    }
+
+    setRpgLevel(nextLevel);
+    setRpgXp(nextXp);
+    
+    setRpgCoins(prev => {
+      const updated = prev + coinsGained;
+      localStorage.setItem('calisthenics_rpg_coins', updated.toString());
+      return updated;
+    });
+    
+    localStorage.setItem('calisthenics_rpg_level', nextLevel.toString());
+    localStorage.setItem('calisthenics_rpg_xp', nextXp.toString());
+
+    if (newBadge) {
+      setRpgBadges(prev => {
+        if (!prev.includes(newBadge)) {
+          const updated = [...prev, newBadge];
+          localStorage.setItem('calisthenics_rpg_badges', JSON.stringify(updated));
+          return updated;
+        }
+        return prev;
+      });
+    }
+    
+    setRpgBossesDefeated(prev => {
+      const updated = prev + 1;
+      localStorage.setItem('calisthenics_rpg_bosses_defeated', updated.toString());
+      return updated;
+    });
+  };
+
+  const handleToggleDevMode = () => {
+    const nextVal = !isDevMode;
+    setIsDevMode(nextVal);
+    localStorage.setItem('calisthenics_dev_mode', nextVal.toString());
+  };
+
+  const handleCheatXpCoins = (xp, coins) => {
+    let nextXp = rpgXp + xp;
+    let nextLevel = rpgLevel;
+    let xpNeeded = nextLevel * 150;
+    
+    while (nextXp >= xpNeeded) {
+      nextXp -= xpNeeded;
+      nextLevel += 1;
+      xpNeeded = nextLevel * 150;
+    }
+
+    setRpgLevel(nextLevel);
+    setRpgXp(nextXp);
+    
+    setRpgCoins(prev => {
+      const updated = prev + coins;
+      localStorage.setItem('calisthenics_rpg_coins', updated.toString());
+      return updated;
+    });
+    
+    localStorage.setItem('calisthenics_rpg_level', nextLevel.toString());
+    localStorage.setItem('calisthenics_rpg_xp', nextXp.toString());
+  };
+
+  const handleResetRPG = () => {
+    if (window.confirm("Apakah Anda yakin ingin mereset seluruh progress RPG (Level, XP, Coins, Badges)?")) {
+      setRpgLevel(1);
+      setRpgXp(0);
+      setRpgCoins(0);
+      setRpgBossesDefeated(0);
+      setRpgBadges([]);
+      localStorage.setItem('calisthenics_rpg_level', '1');
+      localStorage.setItem('calisthenics_rpg_xp', '0');
+      localStorage.setItem('calisthenics_rpg_coins', '0');
+      localStorage.setItem('calisthenics_rpg_bosses_defeated', '0');
+      localStorage.setItem('calisthenics_rpg_badges', JSON.stringify([]));
+    }
+  };
+
+  const handleReplaceJadwalExercise = (oldName, newName) => {
+    // Cari gerakan baru di PROGRESSION_DATABASE
+    let foundLevel = null;
+    
+    for (const key of Object.keys(PROGRESSION_DATABASE)) {
+      const level = PROGRESSION_DATABASE[key].levels.find(l => l.name === newName);
+      if (level) {
+        foundLevel = level;
+        break;
+      }
+    }
+    
+    if (!foundLevel) return false;
+    
+    // Tentukan target reps/durasi baru berdasarkan threshold di db
+    let newReps = "";
+    const isDuration = ['plank', 'lsit', 'handstand', 'hang'].some(keyword => newName.toLowerCase().includes(keyword));
+    if (isDuration) {
+      newReps = `${Math.round(foundLevel.threshold * 0.6)}-${foundLevel.threshold} detik`;
+    } else {
+      newReps = `${Math.round(foundLevel.threshold * 0.8)}-${foundLevel.threshold} reps`;
+    }
+    
+    const newDesc = foundLevel.desc;
+    const newLangkah = generateDefaultLangkah(newName, newDesc);
+    
+    // Update jadwal dengan mencocokkan nama gerakan lama secara substring/parsial
+    const updatedJadwal = jadwal.map(ex => {
+      const exLower = ex.NamaGerakan.toLowerCase();
+      const oldLower = oldName.toLowerCase();
+      
+      if (exLower.includes(oldLower) || oldLower.includes(exLower)) {
+        return {
+          ...ex,
+          NamaGerakan: newName,
+          Reps: newReps,
+          Deskripsi: newDesc,
+          Langkah: newLangkah
+        };
+      }
+      return ex;
+    });
+    
+    setJadwal(updatedJadwal);
+    localStorage.setItem('calisthenics_jadwal', JSON.stringify(updatedJadwal));
+    return true;
   };
 
   const handleUpdateRecovery = (data) => {
@@ -405,6 +570,14 @@ export default function App() {
             onFinishWorkout={handleFinishWorkout}
             onCancelWorkout={handleCancelWorkout}
             loading={loading}
+            personalRecords={personalRecords}
+            onUpdatePR={handleUpdatePR}
+            weight={weight}
+            weightHistory={weightHistory}
+            progressHistory={progressHistory}
+            onReplaceJadwalExercise={handleReplaceJadwalExercise}
+            onRewardRPG={handleRewardRPG}
+            isDevMode={isDevMode}
           />
         ) : (
           <>
@@ -433,6 +606,15 @@ export default function App() {
                 onUpdatePR={handleUpdatePR}
                 recoveryToday={recoveryToday}
                 onUpdateRecovery={handleUpdateRecovery}
+                rpgLevel={rpgLevel}
+                rpgXp={rpgXp}
+                rpgCoins={rpgCoins}
+                rpgBossesDefeated={rpgBossesDefeated}
+                rpgBadges={rpgBadges}
+                isDevMode={isDevMode}
+                onToggleDevMode={handleToggleDevMode}
+                onCheatXpCoins={handleCheatXpCoins}
+                onResetRPG={handleResetRPG}
               />
             )}
             {activeTab === 'history' && (

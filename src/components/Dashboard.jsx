@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2, Award, Activity, Edit3 } from 'lucide-react';
+import { 
+  Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2, 
+  Award, Activity, Edit3, Coins, Swords, Shield 
+} from 'lucide-react';
 
 export default function Dashboard({ 
   jadwal, 
@@ -18,7 +21,16 @@ export default function Dashboard({
   personalRecords = { pullup: 0, pushup: 0, dips: 0, lsit: 0, plank: 0, handstand: 0 },
   onUpdatePR,
   recoveryToday = null,
-  onUpdateRecovery
+  onUpdateRecovery,
+  rpgLevel = 1,
+  rpgXp = 0,
+  rpgCoins = 0,
+  rpgBossesDefeated = 0,
+  rpgBadges = [],
+  isDevMode = false,
+  onToggleDevMode = () => {},
+  onCheatXpCoins = () => {},
+  onResetRPG = () => {}
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
   
@@ -168,6 +180,118 @@ export default function Dashboard({
 
   return (
     <div className="max-w-xl mx-auto space-y-6 px-4 py-2">
+      {/* RPG CHARACTER STATS PROFILE CARD */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 shadow-2xl relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-lime-500/5 rounded-full blur-2xl"></div>
+
+        <div className="flex justify-between items-start">
+          <div className="space-y-1">
+            <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-900/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              {rpgLevel >= 10 ? '🔥 Gravity Defier' : rpgLevel >= 6 ? '🛡️ Athlete' : rpgLevel >= 3 ? '⚔️ Skilled Trainee' : '🔰 Novice'}
+            </span>
+            <h2 className="text-xl font-black text-zinc-100 tracking-tight mt-1">
+              LEVEL {rpgLevel} <span className="text-amber-400 font-medium">Hero</span>
+            </h2>
+          </div>
+
+          {/* RPG Currency & Boss Kills */}
+          <div className="flex items-center space-x-2.5">
+            <div className="flex items-center space-x-1 bg-zinc-950/60 border border-zinc-850 px-2.5 py-1 rounded-xl" title="Koin RPG">
+              <Coins className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span className="text-xs font-bold font-mono text-amber-300">{rpgCoins}</span>
+            </div>
+            <div className="flex items-center space-x-1 bg-zinc-950/60 border border-zinc-850 px-2.5 py-1 rounded-xl" title="Bos Dikalahkan">
+              <Swords className="w-3.5 h-3.5 text-rose-500" />
+              <span className="text-xs font-bold font-mono text-rose-400">{rpgBossesDefeated}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* XP Progress Bar */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+            <span>XP Progress</span>
+            <span className="font-mono text-zinc-400">{rpgXp} / {rpgLevel * 150} XP</span>
+          </div>
+          <div className="w-full h-2 bg-zinc-950 border border-zinc-850 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-lime-400 rounded-full transition-all duration-500 shadow-md shadow-lime-500/20"
+              style={{ width: `${Math.min((rpgXp / (rpgLevel * 150)) * 100, 100)}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Badge Showcase */}
+        {rpgBadges && rpgBadges.length > 0 && (
+          <div className="border-t border-zinc-800/80 pt-3">
+            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-2">Lencana Pencapaian:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {rpgBadges.map((badge, idx) => (
+                <span 
+                  key={idx} 
+                  className="bg-zinc-950/80 border border-zinc-850 text-[9px] font-extrabold px-2.5 py-1 rounded-lg text-zinc-350 tracking-wide flex items-center space-x-1"
+                >
+                  <Shield className="w-2.5 h-2.5 text-lime-400" />
+                  <span>{badge}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {/* DEVELOPER MODE CHEAT PANEL */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4.5 shadow-xl space-y-3 relative overflow-hidden">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm">🛠️</span>
+            <div>
+              <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Mode Pengujian</span>
+              <h3 className="text-xs font-black text-zinc-150 leading-none mt-0.5 uppercase tracking-wide">
+                Developer Cheat Panel
+              </h3>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggleDevMode}
+            className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg border transition cursor-pointer select-none ${
+              isDevMode 
+                ? 'bg-amber-950/20 border-amber-800/40 text-amber-400' 
+                : 'bg-zinc-950/40 border-zinc-850 text-zinc-500 hover:text-zinc-350'
+            }`}
+          >
+            {isDevMode ? 'Dev Mode: ON' : 'Dev Mode: OFF'}
+          </button>
+        </div>
+
+        {isDevMode && (
+          <div className="grid grid-cols-3 gap-2 pt-1 animate-fadeIn">
+            <button
+              type="button"
+              onClick={() => onCheatXpCoins(150, 0)}
+              className="bg-zinc-950 border border-zinc-850 hover:border-lime-900/50 hover:text-lime-400 text-[9px] font-extrabold py-2 rounded-xl transition text-center cursor-pointer"
+            >
+              +150 XP ⚡
+            </button>
+            <button
+              type="button"
+              onClick={() => onCheatXpCoins(0, 50)}
+              className="bg-zinc-950 border border-zinc-850 hover:border-amber-900/50 hover:text-amber-400 text-[9px] font-extrabold py-2 rounded-xl transition text-center cursor-pointer"
+            >
+              +50 Coins 🪙
+            </button>
+            <button
+              type="button"
+              onClick={onResetRPG}
+              className="bg-red-950/20 border border-red-900/30 hover:bg-red-950/40 text-[9px] font-extrabold py-2 rounded-xl transition text-center text-red-400 cursor-pointer"
+            >
+              Reset RPG 🔄
+            </button>
+          </div>
+        )}
+      </div>
       {/* Profil Calisthenics & BMI Header */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-24 h-24 bg-lime-500/10 rounded-full blur-2xl"></div>
