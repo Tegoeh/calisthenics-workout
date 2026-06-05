@@ -1,13 +1,42 @@
 import { useState, useRef } from 'react';
-import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles, Trash2, Calendar, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles, Trash2, Calendar, ChevronDown, ChevronUp, Plus, BarChart3 } from 'lucide-react';
 
 export default function MealTracker({ 
   webAppUrl, 
   connectionStatus,
   mealHistory = [],
   onLogMeal,
-  onDeleteMeal
+  onDeleteMeal,
+  targetCalories = 2800
 }) {
+  // Hitung asupan gizi 7 hari terakhir
+  const getWeeklyData = () => {
+    const data = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const dayMeals = mealHistory.filter(meal => {
+        const mealDateStr = new Date(meal.timestamp).toISOString().split('T')[0];
+        return mealDateStr === dateStr;
+      });
+      
+      const calories = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+      const protein = dayMeals.reduce((sum, m) => sum + (m.protein || 0), 0);
+      
+      data.push({
+        dateStr,
+        dayLabel: d.toLocaleDateString('id-ID', { weekday: 'short' }),
+        calories,
+        protein
+      });
+    }
+    return data;
+  };
+
+  const weeklyData = getWeeklyData();
   const [expandedRecipe, setExpandedRecipe] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -377,6 +406,126 @@ export default function MealTracker({
                   </button>
                 </div>
               ))}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Grafik Konsistensi Nutrisi Mingguan */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl"></div>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2.5">
+            <BarChart3 className="w-5 h-5 text-cyan-400" />
+            <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-300">Konsistensi Kalori 7 Hari Terakhir</h3>
+          </div>
+          <span className="text-[9px] font-extrabold text-cyan-400 bg-cyan-950/30 border border-cyan-900/30 px-2.5 py-1 rounded-full uppercase tracking-wider">
+            Surplus Chart
+          </span>
+        </div>
+
+        <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+          Konsistensi harian adalah kunci utama Ektomorf. Jaga agar tinggi grafik kalori Anda selalu menyentuh atau melewati garis putus-putus target surplus.
+        </p>
+
+        {/* SVG Bar Chart */}
+        {(() => {
+          const svgW = 500;
+          const svgH = 160;
+          const padLeft = 40;
+          const padRight = 15;
+          const padTop = 20;
+          const padBottom = 25;
+          
+          const plotW = svgW - padLeft - padRight;
+          const plotH = svgH - padTop - padBottom;
+          
+          const calorieValues = weeklyData.map(d => d.calories);
+          const maxVal = Math.max(...calorieValues, targetCalories, 2000);
+          
+          // Y position function
+          const getY = (val) => padTop + plotH * (1 - val / maxVal);
+          
+          return (
+            <div className="relative w-full overflow-x-auto select-none">
+              <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full min-w-[320px] h-auto overflow-visible">
+                <defs>
+                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#84cc16" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.3" />
+                  </linearGradient>
+                </defs>
+
+                {/* Target line */}
+                <line
+                  x1={padLeft}
+                  y1={getY(targetCalories)}
+                  x2={svgW - padRight}
+                  y2={getY(targetCalories)}
+                  className="stroke-cyan-500/50"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                />
+                <text
+                  x={svgW - padRight - 5}
+                  y={getY(targetCalories) - 5}
+                  className="fill-cyan-400 font-mono text-[8px] font-extrabold text-right"
+                  textAnchor="end"
+                >
+                  Target: {targetCalories} kkal
+                </text>
+
+                {/* 0 line */}
+                <line
+                  x1={padLeft}
+                  y1={padTop + plotH}
+                  x2={svgW - padRight}
+                  y2={padTop + plotH}
+                  className="stroke-zinc-800"
+                  strokeWidth="1"
+                />
+
+                {/* Bars */}
+                {weeklyData.map((data, idx) => {
+                  const barW = 26;
+                  const x = padLeft + idx * (plotW / 7) + (plotW / 7 - barW) / 2;
+                  const y = getY(data.calories);
+                  const h = plotH * (data.calories / maxVal) || 2;
+                  const isSuccess = data.calories >= targetCalories;
+                  
+                  return (
+                    <g key={idx} className="group">
+                      <rect
+                        x={x}
+                        y={y}
+                        width={barW}
+                        height={h}
+                        rx="4"
+                        fill="url(#barGrad)"
+                        className={`transition-all duration-300 hover:opacity-100 ${isSuccess ? 'opacity-90' : 'opacity-65'}`}
+                      />
+                      
+                      <text
+                        x={x + barW / 2}
+                        y={y - 5}
+                        className="fill-zinc-350 font-mono text-[9px] font-bold text-center"
+                        textAnchor="middle"
+                      >
+                        {data.calories > 0 ? data.calories : ''}
+                      </text>
+
+                      <text
+                        x={x + barW / 2}
+                        y={svgH - 8}
+                        className="fill-zinc-500 font-semibold text-[9px] text-center"
+                        textAnchor="middle"
+                      >
+                        {data.dayLabel}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
             </div>
           );
         })()}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, CheckCircle, XCircle, RefreshCw, HelpCircle, Save, Flame } from 'lucide-react';
+import { Database, CheckCircle, XCircle, RefreshCw, HelpCircle, Save, Flame, Download } from 'lucide-react';
 
 export default function Settings({ 
   webAppUrl, 
@@ -15,7 +15,9 @@ export default function Settings({
   weight,
   setWeight,
   height,
-  setHeight
+  setHeight,
+  progressHistory = [],
+  mealHistory = []
 }) {
   const [urlInput, setUrlInput] = useState(webAppUrl);
   const [caloriesInput, setCaloriesInput] = useState(targetCalories);
@@ -80,6 +82,91 @@ export default function Settings({
     } else {
       setTestResult({ type: 'error', message: 'Koneksi Gagal. Pastikan URL benar dan izin akses Google Apps Script telah disetel ke "Anyone".' });
     }
+  };
+
+  const downloadCSV = (dataArray, filename) => {
+    const csvContent = "\uFEFF" + dataArray.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportWorkoutsToCSV = () => {
+    if (!progressHistory || progressHistory.length === 0) {
+      alert("Belum ada riwayat latihan untuk diekspor!");
+      return;
+    }
+    
+    const headers = ["Tanggal", "Hari Workout", "Status", "Catatan"];
+    const rows = progressHistory.map(item => {
+      const tanggal = item.Tanggal || item.tanggal || '';
+      const hari = item.HariWorkout || item.hariWorkout || '';
+      const status = item.Status || item.status || '';
+      const catatan = item.Catatan || item.catatan || '';
+      
+      const escape = (text) => {
+        if (text === null || text === undefined) return '';
+        const stringVal = String(text);
+        if (stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n')) {
+          return `"${stringVal.replace(/"/g, '""')}"`;
+        }
+        return stringVal;
+      };
+      
+      return [
+        escape(tanggal),
+        escape(hari),
+        escape(status),
+        escape(catatan)
+      ];
+    });
+    
+    downloadCSV([headers, ...rows], `riwayat_workout_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const exportMealsToCSV = () => {
+    if (!mealHistory || mealHistory.length === 0) {
+      alert("Belum ada catatan makanan untuk diekspor!");
+      return;
+    }
+    
+    const headers = ["ID", "Nama Makanan", "Kalori (kkal)", "Protein (g)", "Karbohidrat (g)", "Lemak (g)", "Waktu"];
+    const rows = mealHistory.map(item => {
+      const id = item.id || '';
+      const foodName = item.foodName || '';
+      const calories = item.calories !== undefined ? item.calories : '';
+      const protein = item.protein !== undefined ? item.protein : '';
+      const carbs = item.carbs !== undefined ? item.carbs : '';
+      const fat = item.fat !== undefined ? item.fat : '';
+      const timestamp = item.timestamp || '';
+      
+      const escape = (text) => {
+        if (text === null || text === undefined) return '';
+        const stringVal = String(text);
+        if (stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n')) {
+          return `"${stringVal.replace(/"/g, '""')}"`;
+        }
+        return stringVal;
+      };
+      
+      return [
+        escape(id),
+        escape(foodName),
+        escape(calories),
+        escape(protein),
+        escape(carbs),
+        escape(fat),
+        escape(timestamp)
+      ];
+    });
+    
+    downloadCSV([headers, ...rows], `catatan_makanan_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   return (
@@ -326,6 +413,36 @@ export default function Settings({
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Cadangkan & Ekspor Data Card */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl"></div>
+        <div className="flex items-center space-x-3 mb-1">
+          <Download className="w-6 h-6 text-amber-400" />
+          <h2 className="text-xl font-bold text-zinc-100">Cadangkan & Ekspor Data</h2>
+        </div>
+        <p className="text-sm text-zinc-400 leading-relaxed">
+          Unduh semua riwayat latihan dan catatan makanan Anda dalam format CSV untuk cadangan atau dibuka di Excel/Spreadsheet.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <button
+            onClick={exportWorkoutsToCSV}
+            className="bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow active:scale-[0.98]"
+          >
+            <Download className="w-4 h-4 text-amber-400" />
+            <span>Ekspor Riwayat Latihan</span>
+          </button>
+
+          <button
+            onClick={exportMealsToCSV}
+            className="bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow active:scale-[0.98]"
+          >
+            <Download className="w-4 h-4 text-amber-400" />
+            <span>Ekspor Catatan Makanan</span>
+          </button>
         </div>
       </div>
 

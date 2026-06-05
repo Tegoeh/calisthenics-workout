@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, VolumeX, ArrowLeft, FastForward } from 'lucide-react';
+import { Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, VolumeX, ArrowLeft, FastForward, Mic, MicOff } from 'lucide-react';
 
 export default function WorkoutSession({ 
   day, 
@@ -14,8 +14,23 @@ export default function WorkoutSession({
   const [isResting, setIsResting] = useState(false);
   const [restTimeLeft, setRestTimeLeft] = useState(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [notes, setNotes] = useState('');
   const [showDetails, setShowDetails] = useState(false);
+
+  function speakText(text) {
+    if (isVoiceEnabled && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'id-ID';
+        utterance.rate = 1.15;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn("Speech synthesis failed:", e);
+      }
+    }
+  }
   
   const timerRef = useRef(null);
   
@@ -129,10 +144,18 @@ export default function WorkoutSession({
             setIsResting(false);
             // Bunyi beep panjang menandakan istirahat selesai
             playBeep(880, 0.5);
+            speakText("Mulai!");
             goToNextStep();
             return 0;
           }
           // Bunyi beep pendek di 3 detik terakhir
+          if (prev === 4) {
+            speakText("Tiga");
+          } else if (prev === 3) {
+            speakText("Dua");
+          } else if (prev === 2) {
+            speakText("Satu");
+          }
           if (prev <= 4) {
             playBeep(440, 0.1);
           }
@@ -342,14 +365,46 @@ export default function WorkoutSession({
           <span>Keluar Sesi</span>
         </button>
 
-        {/* Sound Toggle */}
-        <button
-          onClick={() => setIsSoundEnabled(!isSoundEnabled)}
-          className="p-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
-          title={isSoundEnabled ? "Matikan Suara" : "Aktifkan Suara"}
-        >
-          {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-        </button>
+        {/* Sound Toggles */}
+        <div className="flex items-center space-x-2">
+          {/* Voice Toggle */}
+          <button
+            onClick={() => {
+              setIsVoiceEnabled(!isVoiceEnabled);
+              if (!isVoiceEnabled) {
+                try {
+                  window.speechSynthesis.cancel();
+                  const speakTest = new SpeechSynthesisUtterance("Suara aktif");
+                  speakTest.lang = "id-ID";
+                  window.speechSynthesis.speak(speakTest);
+                } catch (e) {
+                  console.warn("Speech synthesis test failed:", e);
+                }
+              }
+            }}
+            className={`p-2 border rounded-lg transition cursor-pointer ${
+              isVoiceEnabled 
+                ? 'bg-lime-950/20 border-lime-800/40 text-lime-400' 
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+            }`}
+            title={isVoiceEnabled ? "Matikan Asisten Suara" : "Aktifkan Asisten Suara"}
+          >
+            {isVoiceEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+          </button>
+
+          {/* Beep Sound Toggle */}
+          <button
+            onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+            className={`p-2 border rounded-lg transition cursor-pointer ${
+              isSoundEnabled 
+                ? 'bg-cyan-950/20 border-cyan-800/40 text-cyan-400' 
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+            }`}
+            title={isSoundEnabled ? "Matikan Beep" : "Aktifkan Beep"}
+          >
+            {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Progress Bar */}
