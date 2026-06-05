@@ -1,14 +1,33 @@
 import React, { useState } from 'react';
-import { Database, CheckCircle, XCircle, RefreshCw, HelpCircle, Save } from 'lucide-react';
+import { Database, CheckCircle, XCircle, RefreshCw, HelpCircle, Save, Flame } from 'lucide-react';
 
-export default function Settings({ webAppUrl, setWebAppUrl, onTestConnection, connectionStatus, loading }) {
+export default function Settings({ 
+  webAppUrl, 
+  setWebAppUrl, 
+  onTestConnection, 
+  connectionStatus, 
+  loading,
+  targetCalories,
+  setTargetCalories,
+  targetProtein,
+  setTargetProtein
+}) {
   const [urlInput, setUrlInput] = useState(webAppUrl);
+  const [caloriesInput, setCaloriesInput] = useState(targetCalories);
+  const [proteinInput, setProteinInput] = useState(targetProtein);
   const [testResult, setTestResult] = useState(null);
 
   const handleSave = () => {
     setWebAppUrl(urlInput);
     localStorage.setItem('calisthenics_web_app_url', urlInput);
-    setTestResult({ type: 'success', message: 'URL berhasil disimpan ke penyimpanan lokal!' });
+    
+    setTargetCalories(Number(caloriesInput));
+    localStorage.setItem('calisthenics_target_calories', caloriesInput);
+
+    setTargetProtein(Number(proteinInput));
+    localStorage.setItem('calisthenics_target_protein', proteinInput);
+
+    setTestResult({ type: 'success', message: 'Semua pengaturan & target berhasil disimpan!' });
   };
 
   const handleTest = async () => {
@@ -27,6 +46,43 @@ export default function Settings({ webAppUrl, setWebAppUrl, onTestConnection, co
 
   return (
     <div className="max-w-xl mx-auto space-y-6 px-4 py-2">
+      {/* Target Nutrisi & Kalori Card */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl"></div>
+        <div className="flex items-center space-x-3 mb-1">
+          <Flame className="w-6 h-6 text-cyan-400 animate-pulse" />
+          <h2 className="text-xl font-bold text-zinc-100">Target Kalori & Protein</h2>
+        </div>
+        <p className="text-sm text-zinc-400 leading-relaxed">
+          Sesuaikan target nutrisi harian Anda untuk mengontrol surplus kalori dan kebutuhan protein Anda.
+        </p>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+              Target Kalori (kkal)
+            </label>
+            <input
+              type="number"
+              className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
+              value={caloriesInput}
+              onChange={(e) => setCaloriesInput(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+              Target Protein (g)
+            </label>
+            <input
+              type="number"
+              className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
+              value={proteinInput}
+              onChange={(e) => setProteinInput(Number(e.target.value))}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-24 h-24 bg-lime-500/10 rounded-full blur-2xl"></div>

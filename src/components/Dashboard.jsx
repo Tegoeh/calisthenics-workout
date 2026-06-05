@@ -5,7 +5,9 @@ export default function Dashboard({
   jadwal, 
   progressHistory, 
   onStartWorkout, 
-  connectionStatus 
+  connectionStatus,
+  targetCalories,
+  targetProtein
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
 
@@ -54,19 +56,19 @@ export default function Dashboard({
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 text-center">
-            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Fisik</span>
-            <span className="text-sm font-extrabold text-zinc-200 mt-1 block">45kg / 172cm</span>
-          </div>
-          <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 text-center">
-            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Status BMI</span>
-            <span className="text-xs font-bold text-red-400 mt-1.5 block flex items-center justify-center space-x-0.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-              <span>15.2 (Kurus)</span>
-            </span>
+            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Fisik & BMI</span>
+            <span className="text-xs font-bold text-zinc-200 mt-1 block">45kg / 15.2</span>
+            <span className="text-[8px] text-red-400 font-semibold block mt-0.5">Sangat Kurus</span>
           </div>
           <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 text-center">
             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Target Kalori</span>
-            <span className="text-xs font-extrabold text-cyan-400 mt-1.5 block">2.800+ kkal</span>
+            <span className="text-xs font-extrabold text-cyan-400 mt-1.5 block font-mono">{targetCalories} kkal</span>
+            <span className="text-[8px] text-zinc-500 block mt-0.5">Surplus Harian</span>
+          </div>
+          <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 text-center">
+            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Target Protein</span>
+            <span className="text-xs font-extrabold text-lime-400 mt-1.5 block font-mono">{targetProtein}g</span>
+            <span className="text-[8px] text-zinc-500 block mt-0.5">Sintesis Otot</span>
           </div>
         </div>
       </div>

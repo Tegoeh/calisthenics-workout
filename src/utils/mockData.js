@@ -3,18 +3,18 @@ export const DEFAULT_JADWAL = [
   {
     Hari: "Senin",
     Kategori: "Pull & Core",
-    NamaGerakan: "Negative Pull-Up",
+    NamaGerakan: "Australian Row (Bodyweight Row)",
     Set: 3,
-    Reps: "5-8 reps",
+    Reps: "8-12 reps",
     Istirahat: 90,
-    Deskripsi: "Lompat hingga dada sejajar bar, lalu turunkan tubuh selembut dan selambat mungkin (durasi 3-5 detik) hingga lengan lurus sepenuhnya. Sangat baik untuk membangun kekuatan awal menarik dan adaptasi tendon.",
+    Deskripsi: "Berbaring di bawah meja kokoh, pegang tepi meja selebar bahu dengan tubuh lurus bertumpu pada tumit. Tarik dada Anda mendekati meja dengan mengaktifkan belikat. Jauh lebih ringan dan aman untuk membangun kekuatan menarik awal sebelum ke pull-up.",
     Langkah: [
-      "Gunakan pijakan atau lompat untuk membawa dada Anda ke atas bar (posisi puncak pull-up).",
-      "Genggam bar dengan kuat menggunakan telapak tangan menghadap ke depan (pronated grip).",
-      "Mulai turunkan tubuh Anda secara perlahan dengan kontrol penuh otot punggung dan lengan.",
-      "Targetkan waktu turun selama 3 hingga 5 detik secara konstan tanpa terjatuh tiba-tiba.",
-      "Turunlah hingga lengan Anda benar-benar lurus (dead hang) sebelum kaki menyentuh lantai kembali.",
-      "Lepaskan bar, istirahat sejenak, dan ulangi untuk repetisi berikutnya."
+      "Cari meja makan/belajar yang kokoh di rumah (atau gunakan sapu yang dipalangkan di dua kursi kokoh).",
+      "Berbaring di bawah meja dengan posisi dada sejajar dengan tepi meja.",
+      "Genggam tepi meja selebar bahu dengan telapak tangan menghadap ke dalam/kaki Anda.",
+      "Luruskan kaki Anda ke depan dengan tumit menempel di lantai. Kencangkan perut dan pantat agar tubuh lurus seperti papan.",
+      "Tarik dada Anda ke atas mendekati meja dengan menarik siku ke belakang bawah secara kuat.",
+      "Turunkan kembali tubuh Anda secara perlahan dan terkontrol ke posisi lengan lurus menggantung semula."
     ]
   },
   {
@@ -56,7 +56,7 @@ export const DEFAULT_JADWAL = [
     Set: 3,
     Reps: "30-45 detik",
     Istirahat: 60,
-    Deskripsi: "Tumpukan berat badan pada lengan bawah dan ujung kaki. Jaga tubuh lurus sejajar dari kepala hingga tumit. Kencangkan perut (hollow body posture) dan bokong sepanjang waktu.",
+    Deskripsi: "Tumpukan berat badan pada lengan bawah dan ujung kaki. Jaga tubuh lurus sejajar dari kepala hingga tumit. Kencangkan perut (hollow body posture) and bokong sepanjang waktu.",
     Langkah: [
       "Letakkan lengan bawah Anda di lantai dengan siku tepat di bawah bahu.",
       "Rapatkan kedua kaki dan angkat lutut dari lantai, bertumpu hanya pada lengan bawah dan ujung jari kaki.",
@@ -182,16 +182,18 @@ export const DEFAULT_JADWAL = [
   {
     Hari: "Jumat",
     Kategori: "Full Body",
-    NamaGerakan: "Negative Pull-Up",
+    NamaGerakan: "Australian Row (Bodyweight Row)",
     Set: 3,
-    Reps: "5-8 reps",
+    Reps: "8-12 reps",
     Istirahat: 90,
-    Deskripsi: "Fokus penuh pada fase eksentrik. Kontrol gerakan turun secara maksimal. Sesi ini memperkuat memori motorik otot penarik.",
+    Deskripsi: "Berbaring di bawah meja kokoh, pegang tepi meja selebar bahu dengan tubuh lurus bertumpu pada tumit. Tarik dada Anda mendekati meja dengan mengaktifkan belikat. Jauh lebih ringan dan aman untuk membangun kekuatan menarik awal sebelum ke pull-up.",
     Langkah: [
-      "Lompat atau gunakan pijakan untuk membawa dada sejajar bar.",
-      "Turunkan tubuh Anda selembut mungkin dalam durasi 4-5 detik.",
-      "Kontrol gerakan dari atas hingga lengan benar-benar lurus pasif.",
-      "Lakukan repetisi demi repetisi dengan fokus mental penuh."
+      "Cari meja makan/belajar yang kokoh di rumah (atau gunakan sapu yang dipalangkan di dua kursi kokoh).",
+      "Berbaring di bawah meja dengan posisi dada sejajar dengan tepi meja.",
+      "Genggam tepi meja selebar bahu dengan telapak tangan menghadap ke dalam/kaki Anda.",
+      "Luruskan kaki Anda ke depan dengan tumit menempel di lantai. Kencangkan perut dan pantat agar tubuh lurus seperti papan.",
+      "Tarik dada Anda ke atas mendekati meja dengan menarik siku ke belakang bawah secara kuat.",
+      "Turunkan kembali tubuh Anda secara perlahan dan terkontrol ke posisi lengan lurus menggantung semula."
     ]
   },
   {

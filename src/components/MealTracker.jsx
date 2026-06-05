@@ -9,6 +9,7 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
   const [error, setError] = useState(null);
   
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   // Menangani perubahan berkas gambar
   const handleImageChange = (e) => {
@@ -149,11 +150,8 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
       {/* Upload/Camera Card */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-6">
         {!imagePreview ? (
-          /* Drag & Drop Area */
-          <div 
-            onClick={triggerFileInput}
-            className="border-2 border-dashed border-zinc-800 hover:border-cyan-500/60 rounded-xl p-8 text-center cursor-pointer transition bg-zinc-950/40 hover:bg-zinc-950/80 group space-y-4"
-          >
+          /* Select Image Source Area */
+          <div className="border-2 border-dashed border-zinc-800 rounded-xl p-8 text-center bg-zinc-950/40 space-y-6">
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -161,12 +159,42 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
               accept="image/*" 
               className="hidden" 
             />
-            <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto text-zinc-500 group-hover:text-cyan-400 transition group-hover:scale-105">
+            <input 
+              type="file" 
+              ref={cameraInputRef} 
+              onChange={handleImageChange} 
+              accept="image/*" 
+              capture="environment"
+              className="hidden" 
+            />
+            
+            <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto text-zinc-400 shadow-md">
               <Camera className="w-6 h-6" />
             </div>
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold text-zinc-300">Ambil Foto atau Pilih Gambar</h4>
-              <p className="text-[10px] text-zinc-500">Mendukung file JPG, PNG, atau potret langsung</p>
+
+            <div className="space-y-1 max-w-[280px] mx-auto">
+              <h4 className="text-xs font-bold text-zinc-300">Unggah Makanan Anda</h4>
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
+                Pilih apakah ingin memotret langsung dengan kamera HP Anda atau mengambil gambar dari penyimpanan galeri.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                onClick={() => cameraInputRef.current.click()}
+                className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-xs cursor-pointer shadow-md active:scale-[0.98]"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Foto Langsung (Kamera HP)</span>
+              </button>
+              
+              <button
+                onClick={() => fileInputRef.current.click()}
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold py-3.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-xs cursor-pointer active:scale-[0.98]"
+              >
+                <ImageIcon className="w-4 h-4 text-zinc-400" />
+                <span>Pilih dari Galeri</span>
+              </button>
             </div>
           </div>
         ) : (

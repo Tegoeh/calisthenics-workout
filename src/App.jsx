@@ -14,6 +14,8 @@ export default function App() {
   const [jadwal, setJadwal] = useState(DEFAULT_JADWAL);
   const [progressHistory, setProgressHistory] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('offline'); // 'connected' | 'offline'
+  const [targetCalories, setTargetCalories] = useState(2800);
+  const [targetProtein, setTargetProtein] = useState(80);
   
   // State untuk sesi aktif
   const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
@@ -30,6 +32,11 @@ export default function App() {
     if (savedProgress) {
       setProgressHistory(JSON.parse(savedProgress));
     }
+
+    const savedCal = localStorage.getItem('calisthenics_target_calories') || '2800';
+    const savedProt = localStorage.getItem('calisthenics_target_protein') || '80';
+    setTargetCalories(Number(savedCal));
+    setTargetProtein(Number(savedProt));
 
     loadDataFromSheets(savedUrl);
   }, []);
@@ -208,6 +215,8 @@ export default function App() {
                 progressHistory={progressHistory}
                 onStartWorkout={handleStartWorkout}
                 connectionStatus={connectionStatus}
+                targetCalories={targetCalories}
+                targetProtein={targetProtein}
               />
             )}
             {activeTab === 'history' && (
@@ -232,6 +241,10 @@ export default function App() {
                 onTestConnection={handleTestConnection}
                 connectionStatus={connectionStatus}
                 loading={loading}
+                targetCalories={targetCalories}
+                setTargetCalories={setTargetCalories}
+                targetProtein={targetProtein}
+                setTargetProtein={setTargetProtein}
               />
             )}
           </>
