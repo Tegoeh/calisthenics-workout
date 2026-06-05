@@ -283,7 +283,7 @@ export default function Dashboard({
               onUpdateWater(Math.max(0, waterIntake - 250));
             }}
             style={{ touchAction: 'manipulation' }}
-            className="flex-1 bg-zinc-950/40 border border-zinc-850 text-zinc-400 hover:text-zinc-200 hover:border-zinc-800 font-semibold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
+            className="flex-1 bg-zinc-950/40 border border-zinc-850 text-zinc-400 hover:text-zinc-200 hover:border-zinc-800 font-semibold py-2 px-3 rounded-xl text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
           >
             <span>- 250ml</span>
           </button>
@@ -295,7 +295,7 @@ export default function Dashboard({
               onUpdateWater(Math.min(3000, waterIntake + 250));
             }}
             style={{ touchAction: 'manipulation' }}
-            className="flex-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-bold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
+            className="flex-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-bold py-2 px-3 rounded-xl text-[11px] flex items-center justify-center space-x-1 cursor-pointer select-none"
           >
             <span>+ 250ml</span>
           </button>
@@ -307,7 +307,7 @@ export default function Dashboard({
               onUpdateWater(3000);
             }}
             style={{ touchAction: 'manipulation' }}
-            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-2 px-3.5 rounded-xl transition text-[11px] flex items-center justify-center cursor-pointer select-none"
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-2 px-3.5 rounded-xl text-[11px] flex items-center justify-center cursor-pointer select-none"
             title="Penuhi target langsung"
           >
             <span>Penuh</span>
