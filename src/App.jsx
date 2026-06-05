@@ -587,6 +587,7 @@ export default function App() {
                 progressHistory={progressHistory}
                 mealHistory={mealHistory}
                 onStartWorkout={handleStartWorkout}
+                onReplaceJadwalExercise={handleReplaceJadwalExercise}
                 connectionStatus={connectionStatus}
                 targetCalories={targetCalories}
                 targetProtein={targetProtein}

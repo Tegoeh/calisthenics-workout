@@ -229,17 +229,17 @@ export const DEFAULT_JADWAL = [
   {
     Hari: "Jumat",
     Kategori: "Full Body",
-    NamaGerakan: "Tuck L-Sit Hold (Floor)",
+    NamaGerakan: "Leg Raise (Lying)",
     Set: 3,
-    Reps: "10-15 detik",
+    Reps: "8-12 reps",
     Istirahat: 60,
-    Deskripsi: "Duduk di lantai dengan kaki ditekuk dekat dada. Letakkan tangan di samping paha, tekan kuat ke lantai untuk mengangkat pinggul dan kaki dari lantai. Jika terlalu berat, biarkan tumit tetap menyentuh lantai sedikit.",
+    Deskripsi: "Berbaring telentang di lantai, tekan punggung bawah ke lantai (no arching). Angkat kaki lurus ke atas hingga membentuk sudut 90 derajat, lalu turunkan kembali secara perlahan hampir menyentuh lantai.",
     Langkah: [
-      "Duduk di lantai dengan kaki rapat dan ditekuk mendekati dada Anda.",
-      "Letakkan telapak tangan Anda rata di lantai di samping paha Anda.",
-      "Tekan lantai sekuat tenaga dengan tangan Anda, kencangkan bahu dan lengan bawah untuk mengangkat pinggul Anda dari lantai.",
-      "Gunakan kekuatan otot core/perut untuk mengangkat kaki Anda (lutut tertekuk) dari lantai agar melayang bebas.",
-      "Jika terlalu berat, jaga agar tumit Anda tetap menyentuh lantai sedikit sebagai bantuan penopang, sementara pinggul tetap melayang."
+      "Berbaring telentang di lantai dengan kaki lurus rapat dan tangan di samping tubuh untuk stabilitas.",
+      "PENTING: Tekan punggung bawah Anda erat-erat ke lantai sehingga tidak ada celah udara di bawah punggung Anda.",
+      "Angkat kedua kaki Anda secara bersamaan ke atas secara perlahan hingga tegak lurus dengan lantai.",
+      "Turunkan kaki kembali secara perlahan dengan kontrol otot perut bawah secara penuh.",
+      "Hentikan kaki sekitar 5-10 cm sebelum menyentuh lantai, lalu langsung angkat kembali untuk repetisi berikutnya."
     ]
   },
   {

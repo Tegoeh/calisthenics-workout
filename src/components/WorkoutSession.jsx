@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, 
   VolumeX, ArrowLeft, FastForward, Mic, MicOff, Award, 
-  Sparkles, Weight, ArrowUpCircle, Coins, Shield
+  Sparkles, Weight, ArrowUpCircle, ArrowDownCircle, Coins, Shield
 } from 'lucide-react';
 import { 
   findExerciseInProgression, 
@@ -190,12 +190,12 @@ export default function WorkoutSession({
       });
 
       pose.setOptions({
-        modelComplexity: 1,
+        modelComplexity: 0, // Lite Model untuk FPS tinggi & anti-lag di laptop/hp
         smoothLandmarks: true,
         enableSegmentation: false,
         smoothSegmentation: false,
-        minDetectionConfidence: 0.6,
-        minTrackingConfidence: 0.6
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
       });
 
       pose.onResults((results) => {
@@ -212,21 +212,45 @@ export default function WorkoutSession({
         if (results.poseLandmarks) {
           const landmarks = results.poseLandmarks;
 
-          const shoulder = landmarks[11];
-          const elbow = landmarks[13];
-          const wrist = landmarks[15];
+          // Keypoints Kiri
+          const leftShoulder = landmarks[11];
+          const leftElbow = landmarks[13];
+          const leftWrist = landmarks[15];
+          const leftHip = landmarks[23];
+          const leftKnee = landmarks[25];
+          const leftAnkle = landmarks[27];
 
-          const hip = landmarks[23];
-          const knee = landmarks[25];
-          const ankle = landmarks[27];
+          // Keypoints Kanan
+          const rightShoulder = landmarks[12];
+          const rightElbow = landmarks[14];
+          const rightWrist = landmarks[16];
+          const rightHip = landmarks[24];
+          const rightKnee = landmarks[26];
+          const rightAnkle = landmarks[28];
 
           // Deteksi jenis latihan dari nama gerakan
           const exName = activeExercise ? activeExercise.NamaGerakan.toLowerCase() : "";
           const isLegs = exName.includes("squat") || exName.includes("lunge") || exName.includes("calf");
 
-          const angle = isLegs 
-            ? calculateAngle(hip, knee, ankle) 
-            : calculateAngle(shoulder, elbow, wrist);
+          // Hitung sudut sendi secara adaptif dari sisi yang paling terlihat (visibility tertinggi)
+          let angle = 180;
+          if (isLegs) {
+            const leftLegVis = (leftHip?.visibility || 0) + (leftKnee?.visibility || 0) + (leftAnkle?.visibility || 0);
+            const rightLegVis = (rightHip?.visibility || 0) + (rightKnee?.visibility || 0) + (rightAnkle?.visibility || 0);
+            if (leftLegVis >= rightLegVis) {
+              angle = calculateAngle(leftHip, leftKnee, leftAnkle);
+            } else {
+              angle = calculateAngle(rightHip, rightKnee, rightAnkle);
+            }
+          } else {
+            const leftArmVis = (leftShoulder?.visibility || 0) + (leftElbow?.visibility || 0) + (leftWrist?.visibility || 0);
+            const rightArmVis = (rightShoulder?.visibility || 0) + (rightElbow?.visibility || 0) + (rightWrist?.visibility || 0);
+            if (leftArmVis >= rightArmVis) {
+              angle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+            } else {
+              angle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+            }
+          }
 
           setJointAngle(angle);
 
@@ -285,24 +309,45 @@ export default function WorkoutSession({
             canvasCtx.fill();
           };
 
-          // Lengan (Shoulder - Elbow - Wrist)
-          drawLine(shoulder, elbow, '#06b6d4', 3);
-          drawLine(elbow, wrist, '#06b6d4', 3);
+          // Lengan Kiri (Shoulder - Elbow - Wrist)
+          drawLine(leftShoulder, leftElbow, '#06b6d4', 3);
+          drawLine(leftElbow, leftWrist, '#06b6d4', 3);
 
-          // Kaki (Hip - Knee - Ankle)
-          drawLine(hip, knee, '#22c55e', 3);
-          drawLine(knee, ankle, '#22c55e', 3);
+          // Lengan Kanan (Shoulder - Elbow - Wrist)
+          drawLine(rightShoulder, rightElbow, '#06b6d4', 3);
+          drawLine(rightElbow, rightWrist, '#06b6d4', 3);
 
-          // Tubuh (Shoulder - Hip)
-          drawLine(shoulder, hip, '#84cc16', 3);
+          // Kaki Kiri (Hip - Knee - Ankle)
+          drawLine(leftHip, leftKnee, '#22c55e', 3);
+          drawLine(leftKnee, leftAnkle, '#22c55e', 3);
 
-          // Draw keypoints
-          drawPoint(shoulder, '#a855f7', 5);
-          drawPoint(elbow, '#06b6d4', 6);
-          drawPoint(wrist, '#3b82f6', 6);
-          drawPoint(hip, '#84cc16', 5);
-          drawPoint(knee, '#22c55e', 6);
-          drawPoint(ankle, '#10b981', 6);
+          // Kaki Kanan (Hip - Knee - Ankle)
+          drawLine(rightHip, rightKnee, '#22c55e', 3);
+          drawLine(rightKnee, rightAnkle, '#22c55e', 3);
+
+          // Tubuh Kiri & Kanan (Shoulder - Hip)
+          drawLine(leftShoulder, leftHip, '#84cc16', 3);
+          drawLine(rightShoulder, rightHip, '#84cc16', 3);
+
+          // Garis Bahu & Pinggul Penghubung Horizontal
+          drawLine(leftShoulder, rightShoulder, '#e11d48', 2.5);
+          drawLine(leftHip, rightHip, '#e11d48', 2.5);
+
+          // Draw keypoints kiri
+          drawPoint(leftShoulder, '#a855f7', 4.5);
+          drawPoint(leftElbow, '#06b6d4', 5);
+          drawPoint(leftWrist, '#3b82f6', 5);
+          drawPoint(leftHip, '#84cc16', 4.5);
+          drawPoint(leftKnee, '#22c55e', 5);
+          drawPoint(leftAnkle, '#10b981', 5);
+
+          // Draw keypoints kanan
+          drawPoint(rightShoulder, '#a855f7', 4.5);
+          drawPoint(rightElbow, '#06b6d4', 5);
+          drawPoint(rightWrist, '#3b82f6', 5);
+          drawPoint(rightHip, '#84cc16', 4.5);
+          drawPoint(rightKnee, '#22c55e', 5);
+          drawPoint(rightAnkle, '#10b981', 5);
         }
       });
 
@@ -330,9 +375,18 @@ export default function WorkoutSession({
         document.body.appendChild(videoElement);
       }
 
+      // Throttling 15 FPS untuk menghemat CPU/GPU & anti patah-patah
+      let lastFrameTime = 0;
+      const fpsLimit = 15;
+      const frameInterval = 1000 / fpsLimit;
+
       // Start webcam stream
       const camera = new window.Camera(videoElement, {
         onFrame: async () => {
+          const now = performance.now();
+          if (now - lastFrameTime < frameInterval) return;
+          lastFrameTime = now;
+
           if (videoElement && activePoseRef.current) {
             try {
               await activePoseRef.current.send({ image: videoElement });
@@ -791,7 +845,8 @@ export default function WorkoutSession({
                               oldName: ex.NamaGerakan,
                               nextName: progInfo.next.name,
                               desc: progInfo.next.desc,
-                              categoryName: progInfo.categoryName
+                              categoryName: progInfo.categoryName,
+                              isDowngrade: false
                             });
                           }}
                           className={`text-[10px] px-2 py-1.5 rounded-lg border font-bold flex items-center space-x-1.5 transition cursor-pointer select-none ${
@@ -803,6 +858,28 @@ export default function WorkoutSession({
                         >
                           <ArrowUpCircle className="w-3.5 h-3.5" />
                           <span>{isUpgraded ? 'Up Leveled' : 'Terlalu Mudah?'}</span>
+                        </button>
+                      )}
+
+                      {/* Downgrade/Terlalu Sulit Button */}
+                      {progInfo && progInfo.index > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isUpgraded) return;
+                            setActiveUpgradeInfo({
+                              oldName: ex.NamaGerakan,
+                              nextName: progInfo.levels[progInfo.index - 1].name,
+                              desc: progInfo.levels[progInfo.index - 1].desc,
+                              categoryName: progInfo.categoryName,
+                              isDowngrade: true
+                            });
+                          }}
+                          className="text-[10px] px-2 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:border-rose-900/50 font-bold flex items-center space-x-1.5 transition cursor-pointer select-none"
+                          title="Gerakan terasa terlalu sulit? Klik untuk menurunkan level kesulitan"
+                        >
+                          <ArrowDownCircle className="w-3.5 h-3.5" />
+                          <span>Terlalu Sulit?</span>
                         </button>
                       )}
 
@@ -974,25 +1051,39 @@ export default function WorkoutSession({
           </button>
         </div>
 
-        {/* Modal Overlay Upgrade Level */}
+        {/* Modal Overlay Upgrade / Downgrade Level */}
         {activeUpgradeInfo && (
           <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-left relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-lime-500"></div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-left relative overflow-hidden">
+              <div className={`absolute top-0 left-0 w-full h-1.5 ${activeUpgradeInfo.isDowngrade ? 'bg-rose-500' : 'bg-lime-500'}`}></div>
               
               <div className="flex items-center space-x-2 pb-2 border-b border-zinc-800">
-                <ArrowUpCircle className="w-5 h-5 text-lime-400 animate-pulse" />
-                <h3 className="font-bold text-sm text-zinc-100">Upgrade Level Kesulitan</h3>
+                {activeUpgradeInfo.isDowngrade ? (
+                  <ArrowDownCircle className="w-5 h-5 text-rose-400 animate-pulse" />
+                ) : (
+                  <ArrowUpCircle className="w-5 h-5 text-lime-400 animate-pulse" />
+                )}
+                <h3 className="font-bold text-sm text-zinc-100">
+                  {activeUpgradeInfo.isDowngrade ? 'Turunkan Level Kesulitan' : 'Upgrade Level Kesulitan'}
+                </h3>
               </div>
               
               <div className="space-y-3 text-xs leading-relaxed font-sans text-zinc-350">
                 <p>
-                  Apakah Anda ingin menaikkan tingkat kesulitan gerakan ini?
+                  {activeUpgradeInfo.isDowngrade 
+                    ? 'Apakah Anda ingin menurunkan tingkat kesulitan gerakan ini karena terasa terlalu berat?' 
+                    : 'Apakah Anda ingin menaikkan tingkat kesulitan gerakan ini?'}
                 </p>
                 <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-4 space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">{activeUpgradeInfo.categoryName}</span>
-                    <span className="text-[9px] bg-lime-950/30 text-lime-400 border border-lime-800/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Level Up</span>
+                    <span className={`text-[9px] border px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      activeUpgradeInfo.isDowngrade 
+                        ? 'bg-rose-950/30 text-rose-400 border-rose-800/30' 
+                        : 'bg-lime-950/30 text-lime-400 border-lime-800/30'
+                    }`}>
+                      {activeUpgradeInfo.isDowngrade ? 'Down Level' : 'Level Up'}
+                    </span>
                   </div>
                   <h4 className="font-extrabold text-sm text-zinc-100">{activeUpgradeInfo.nextName}</h4>
                   <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">{activeUpgradeInfo.desc}</p>
@@ -1012,9 +1103,13 @@ export default function WorkoutSession({
                     }
                     setActiveUpgradeInfo(null);
                   }}
-                  className="flex-1 bg-lime-500 hover:bg-lime-400 text-zinc-950 font-extrabold py-2.5 rounded-xl transition text-xs cursor-pointer text-center"
+                  className={`flex-1 font-extrabold py-2.5 rounded-xl transition text-xs cursor-pointer text-center ${
+                    activeUpgradeInfo.isDowngrade
+                      ? 'bg-rose-600 hover:bg-rose-500 text-zinc-950 shadow-lg shadow-rose-500/10'
+                      : 'bg-lime-500 hover:bg-lime-400 text-zinc-950 shadow-lg shadow-lime-500/10'
+                  }`}
                 >
-                  Upgrade Sekarang
+                  {activeUpgradeInfo.isDowngrade ? 'Turunkan Level' : 'Upgrade Sekarang'}
                 </button>
                 <button
                   type="button"

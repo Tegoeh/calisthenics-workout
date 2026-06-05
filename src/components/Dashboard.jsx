@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { 
   Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2, 
-  Award, Activity, Edit3, Coins, Swords, Shield 
+  Award, Activity, Edit3, Coins, Swords, Shield, Settings 
 } from 'lucide-react';
+import { findExerciseInProgression } from '../utils/progressionDb';
 
 export default function Dashboard({ 
   jadwal, 
   progressHistory, 
   mealHistory = [],
   onStartWorkout, 
+  onReplaceJadwalExercise = () => {},
   connectionStatus,
   targetCalories,
   targetProtein,
@@ -33,6 +35,7 @@ export default function Dashboard({
   onResetRPG = () => {}
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
+  const [activeQuickAdjust, setActiveQuickAdjust] = useState(null);
   
   // State untuk form input task update BB/TB
   const [taskWeight, setTaskWeight] = useState(weight);
@@ -581,20 +584,42 @@ export default function Dashboard({
 
             {/* List of Exercises for Today */}
             <div className="space-y-2">
-              {workoutToday.map((ex, idx) => (
-                <div 
-                  key={idx} 
-                  className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 flex items-center justify-between hover:border-zinc-800 transition text-xs"
-                >
-                  <div className="space-y-1">
-                    <span className="font-semibold text-zinc-300">{ex.NamaGerakan}</span>
-                    <span className="text-[10px] text-zinc-500 block">{ex.Reps} ({ex.Set} Set)</span>
+              {workoutToday.map((ex, idx) => {
+                const progInfo = findExerciseInProgression(ex.NamaGerakan);
+                return (
+                  <div 
+                    key={idx} 
+                    className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 flex items-center justify-between hover:border-zinc-800 transition text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-semibold text-zinc-300">{ex.NamaGerakan}</span>
+                        {progInfo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveQuickAdjust({
+                                oldName: ex.NamaGerakan,
+                                categoryName: progInfo.categoryName,
+                                nextLevel: progInfo.next,
+                                prevLevel: progInfo.index > 0 ? progInfo.levels[progInfo.index - 1] : null
+                              });
+                            }}
+                            className="p-1 hover:bg-zinc-900 rounded-md text-zinc-500 hover:text-amber-400 transition cursor-pointer"
+                            title="Sesuaikan Level Kesulitan Gerakan"
+                          >
+                            <Settings className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block">{ex.Reps} ({ex.Set} Set)</span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950/20 border border-cyan-900/30 px-2 py-0.5 rounded">
+                      Rest {ex.Istirahat}s
+                    </span>
                   </div>
-                  <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950/20 border border-cyan-900/30 px-2 py-0.5 rounded">
-                    Rest {ex.Istirahat}s
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Start Button */}
@@ -815,6 +840,74 @@ export default function Dashboard({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Adjust Exercise Level Modal */}
+      {activeQuickAdjust && (
+        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-850 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 text-left">
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-zinc-850">
+              <Zap className="w-5 h-5 text-amber-400" />
+              <h3 className="font-bold text-sm text-zinc-100">Sesuaikan Kesulitan Gerakan</h3>
+            </div>
+            
+            <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+              Gerakan aktif: <span className="text-zinc-200 font-semibold">{activeQuickAdjust.oldName}</span> ({activeQuickAdjust.categoryName})
+            </p>
+
+            <div className="space-y-3">
+              {/* Opsi Upgrade */}
+              {activeQuickAdjust.nextLevel ? (
+                <button
+                  onClick={() => {
+                    onReplaceJadwalExercise(activeQuickAdjust.oldName, activeQuickAdjust.nextLevel.name);
+                    setActiveQuickAdjust(null);
+                  }}
+                  className="w-full bg-zinc-950 hover:bg-zinc-850 border border-zinc-850 rounded-xl p-3 flex flex-col items-start gap-1.5 transition text-left cursor-pointer group"
+                >
+                  <span className="text-[9px] bg-lime-950/30 text-lime-400 border border-lime-800/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center space-x-1">
+                    <Zap className="w-2.5 h-2.5 text-lime-400 fill-current" />
+                    <span>Naik Level (Lebih Berat)</span>
+                  </span>
+                  <span className="text-xs font-bold text-zinc-200 group-hover:text-lime-400 transition">{activeQuickAdjust.nextLevel.name}</span>
+                  <span className="text-[10px] text-zinc-500 leading-normal font-sans">{activeQuickAdjust.nextLevel.desc}</span>
+                </button>
+              ) : (
+                <div className="bg-zinc-950/30 border border-zinc-850/40 rounded-xl p-3 text-center text-[10px] text-zinc-500 font-sans">
+                  Gerakan ini sudah berada di tingkat tertinggi dalam database! 🏆
+                </div>
+              )}
+
+              {/* Opsi Downgrade */}
+              {activeQuickAdjust.prevLevel ? (
+                <button
+                  onClick={() => {
+                    onReplaceJadwalExercise(activeQuickAdjust.oldName, activeQuickAdjust.prevLevel.name);
+                    setActiveQuickAdjust(null);
+                  }}
+                  className="w-full bg-zinc-950 hover:bg-zinc-850 border border-zinc-850 rounded-xl p-3 flex flex-col items-start gap-1.5 transition text-left cursor-pointer group"
+                >
+                  <span className="text-[9px] bg-rose-950/30 text-rose-400 border border-rose-800/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center space-x-1">
+                    <span>📉 Turun Level (Lebih Ringan)</span>
+                  </span>
+                  <span className="text-xs font-bold text-zinc-200 group-hover:text-rose-400 transition">{activeQuickAdjust.prevLevel.name}</span>
+                  <span className="text-[10px] text-zinc-500 leading-normal font-sans">{activeQuickAdjust.prevLevel.desc}</span>
+                </button>
+              ) : (
+                <div className="bg-zinc-950/30 border border-zinc-850/40 rounded-xl p-3 text-center text-[10px] text-zinc-500 font-sans">
+                  Gerakan ini sudah berada di tingkat awal (paling mudah)! 🔰
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setActiveQuickAdjust(null)}
+              className="w-full bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 font-bold py-2.5 rounded-xl transition cursor-pointer text-center text-xs"
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}
