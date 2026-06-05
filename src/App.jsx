@@ -21,7 +21,7 @@ export default function App() {
   const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
   const [loading, setLoading] = useState(false);
 
-  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyNn1y0rjMhNwfeljLnc-H3Tb6UHmsMfhaQ-Cj43FbcqqHRkvpbpxLVPPi_7uIoJX4l/exec';
+  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxCMeYbrM6fVkZM3pQTBoYDn7sidVgKe-YFVKEwvBxvmGVdvI6TWC5oYp0LlzzK_AZl/exec';
 
   // Load awal dari LocalStorage
   useEffect(() => {
