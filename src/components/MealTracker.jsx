@@ -7,6 +7,7 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isSimulated, setIsSimulated] = useState(false);
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -39,6 +40,7 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
     setLoading(true);
     setError(null);
     setResult(null);
+    setIsSimulated(false);
 
     // Ambil data base64 bersih (menghilangkan metadata "data:image/jpeg;base64,")
     const base64Data = imagePreview.split(',')[1];
@@ -73,17 +75,20 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
         } else {
           // Jika Apps Script belum disetel API Key-nya, jalankan fallback simulasi cerdas
           console.warn("Apps Script belum dikonfigurasi dengan Gemini API. Mengaktifkan simulasi...");
+          setIsSimulated(true);
           runSimulationAnalysis();
         }
       } catch (err) {
         console.error("Gagal melakukan analisis API online:", err);
         // Fallback simulasi jika error koneksi
+        setIsSimulated(true);
         runSimulationAnalysis();
       } finally {
         setLoading(false);
       }
     } else {
       // Jalankan simulasi offline instan
+      setIsSimulated(true);
       setTimeout(() => {
         runSimulationAnalysis();
         setLoading(false);
@@ -297,9 +302,17 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
           </div>
 
           {/* Sync status warning in result */}
-          {connectionStatus !== 'connected' && (
-            <div className="text-[10px] text-zinc-500 text-center border-t border-zinc-800/40 pt-4">
-              ⚠️ Hasil di atas adalah **Simulasi AI Offline**. Hubungkan Google Sheets di menu Database untuk mengaktifkan AI Vision Gemini asli secara online.
+          {isSimulated && (
+            <div className="text-xs text-amber-300 bg-amber-950/20 border border-amber-900/60 p-4 rounded-xl space-y-1 mt-4">
+              <div className="flex items-center space-x-1.5 font-bold">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Mode Demonstrasi / Simulasi Lokal Aktif</span>
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">
+                Aplikasi belum mendeteksi konfigurasi API Key Gemini di Google Apps Script Anda (atau status database offline). Gambar tidak diproses oleh AI Vision asli, melainkan disimulasikan dari menu lokal secara acak. 
+                <br/>
+                <strong className="text-cyan-400 mt-1 block">Cara mengaktifkan AI asli: Dapatkan API Key Gemini gratis di Google AI Studio, lalu tambahkan sebagai properti skrip dengan nama GEMINI_API_KEY di pengaturan Apps Script Anda.</strong>
+              </p>
             </div>
           )}
         </div>
