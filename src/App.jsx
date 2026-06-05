@@ -119,10 +119,6 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [isDevMode, setIsDevMode] = useState(() => {
-    return localStorage.getItem('calisthenics_dev_mode') === 'true';
-  });
-
   const handleUpdatePR = (key, value) => {
     const updated = { ...personalRecords, [key]: Number(value) };
     setPersonalRecords(updated);
@@ -170,50 +166,7 @@ export default function App() {
     });
   };
 
-  const handleToggleDevMode = () => {
-    const nextVal = !isDevMode;
-    setIsDevMode(nextVal);
-    localStorage.setItem('calisthenics_dev_mode', nextVal.toString());
-  };
 
-  const handleCheatXpCoins = (xp, coins) => {
-    let nextXp = rpgXp + xp;
-    let nextLevel = rpgLevel;
-    let xpNeeded = nextLevel * 150;
-    
-    while (nextXp >= xpNeeded) {
-      nextXp -= xpNeeded;
-      nextLevel += 1;
-      xpNeeded = nextLevel * 150;
-    }
-
-    setRpgLevel(nextLevel);
-    setRpgXp(nextXp);
-    
-    setRpgCoins(prev => {
-      const updated = prev + coins;
-      localStorage.setItem('calisthenics_rpg_coins', updated.toString());
-      return updated;
-    });
-    
-    localStorage.setItem('calisthenics_rpg_level', nextLevel.toString());
-    localStorage.setItem('calisthenics_rpg_xp', nextXp.toString());
-  };
-
-  const handleResetRPG = () => {
-    if (window.confirm("Apakah Anda yakin ingin mereset seluruh progress RPG (Level, XP, Coins, Badges)?")) {
-      setRpgLevel(1);
-      setRpgXp(0);
-      setRpgCoins(0);
-      setRpgBossesDefeated(0);
-      setRpgBadges([]);
-      localStorage.setItem('calisthenics_rpg_level', '1');
-      localStorage.setItem('calisthenics_rpg_xp', '0');
-      localStorage.setItem('calisthenics_rpg_coins', '0');
-      localStorage.setItem('calisthenics_rpg_bosses_defeated', '0');
-      localStorage.setItem('calisthenics_rpg_badges', JSON.stringify([]));
-    }
-  };
 
   const handleReplaceJadwalExercise = (oldName, newName) => {
     // Cari gerakan baru di PROGRESSION_DATABASE
@@ -577,7 +530,6 @@ export default function App() {
             progressHistory={progressHistory}
             onReplaceJadwalExercise={handleReplaceJadwalExercise}
             onRewardRPG={handleRewardRPG}
-            isDevMode={isDevMode}
           />
         ) : (
           <>
@@ -612,10 +564,6 @@ export default function App() {
                 rpgCoins={rpgCoins}
                 rpgBossesDefeated={rpgBossesDefeated}
                 rpgBadges={rpgBadges}
-                isDevMode={isDevMode}
-                onToggleDevMode={handleToggleDevMode}
-                onCheatXpCoins={handleCheatXpCoins}
-                onResetRPG={handleResetRPG}
               />
             )}
             {activeTab === 'history' && (

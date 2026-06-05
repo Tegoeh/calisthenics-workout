@@ -28,11 +28,7 @@ export default function Dashboard({
   rpgXp = 0,
   rpgCoins = 0,
   rpgBossesDefeated = 0,
-  rpgBadges = [],
-  isDevMode = false,
-  onToggleDevMode = () => {},
-  onCheatXpCoins = () => {},
-  onResetRPG = () => {}
+  rpgBadges = []
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
   const [activeQuickAdjust, setActiveQuickAdjust] = useState(null);
@@ -240,58 +236,6 @@ export default function Dashboard({
                 </span>
               ))}
             </div>
-          </div>
-        )}
-      </div>
-      {/* DEVELOPER MODE CHEAT PANEL */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4.5 shadow-xl space-y-3 relative overflow-hidden">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm">🛠️</span>
-            <div>
-              <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block">Mode Pengujian</span>
-              <h3 className="text-xs font-black text-zinc-150 leading-none mt-0.5 uppercase tracking-wide">
-                Developer Cheat Panel
-              </h3>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onToggleDevMode}
-            className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg border transition cursor-pointer select-none ${
-              isDevMode 
-                ? 'bg-amber-950/20 border-amber-800/40 text-amber-400' 
-                : 'bg-zinc-950/40 border-zinc-850 text-zinc-500 hover:text-zinc-350'
-            }`}
-          >
-            {isDevMode ? 'Dev Mode: ON' : 'Dev Mode: OFF'}
-          </button>
-        </div>
-
-        {isDevMode && (
-          <div className="grid grid-cols-3 gap-2 pt-1 animate-fadeIn">
-            <button
-              type="button"
-              onClick={() => onCheatXpCoins(150, 0)}
-              className="bg-zinc-950 border border-zinc-850 hover:border-lime-900/50 hover:text-lime-400 text-[9px] font-extrabold py-2 rounded-xl transition text-center cursor-pointer"
-            >
-              +150 XP ⚡
-            </button>
-            <button
-              type="button"
-              onClick={() => onCheatXpCoins(0, 50)}
-              className="bg-zinc-950 border border-zinc-850 hover:border-amber-900/50 hover:text-amber-400 text-[9px] font-extrabold py-2 rounded-xl transition text-center cursor-pointer"
-            >
-              +50 Coins 🪙
-            </button>
-            <button
-              type="button"
-              onClick={onResetRPG}
-              className="bg-red-950/20 border border-red-900/30 hover:bg-red-950/40 text-[9px] font-extrabold py-2 rounded-xl transition text-center text-red-400 cursor-pointer"
-            >
-              Reset RPG 🔄
-            </button>
           </div>
         )}
       </div>

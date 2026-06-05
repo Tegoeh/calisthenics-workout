@@ -21,8 +21,7 @@ export default function WorkoutSession({
   weightHistory = [],
   progressHistory = [],
   onReplaceJadwalExercise = () => {},
-  onRewardRPG = () => {},
-  isDevMode = false
+  onRewardRPG = () => {}
 }) {
   const [sessionPhase, setSessionPhase] = useState('warmup'); // 'warmup' | 'workout' | 'cooldown' | 'finish'
 
@@ -1235,45 +1234,7 @@ export default function WorkoutSession({
           ))}
         </div>
 
-        {/* DEV CHEATS */}
-        {isDevMode && (
-          <div className="flex space-x-2 pt-1.5 border-t border-zinc-850/30">
-            <button
-              type="button"
-              onClick={() => {
-                setBossHp(0);
-                playBeep(880, 0.3);
-                setBattleLog(prev => ["⚡ CHEAT: Bos berhasil dikalahkan secara instan!", ...prev].slice(0, 5));
-              }}
-              className="flex-1 bg-red-950/30 border border-red-900/40 text-red-400 text-[8px] font-bold py-1 rounded-lg transition text-center cursor-pointer select-none"
-            >
-              ☠️ Instakill Boss
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setCustomReps(prev => {
-                  const currentVal = prev[repsKey] !== undefined ? prev[repsKey] : parseTargetReps(activeExercise.Reps);
-                  const nextVal = currentVal + 1;
-                  setBossHp(bossPrev => Math.max(bossPrev - 1, 0));
-                  setDamageDealtTotal(damagePrev => damagePrev + 1);
-                  playBeep(700, 0.05);
-                  
-                  const selectedBoss = BOSSES[selectedBossIdx];
-                  setBattleLog(logPrev => [
-                    `⚡ CHEAT: Rep ke-${nextVal} ${activeExercise.NamaGerakan} mengenai ${selectedBoss.name}!`,
-                    ...logPrev
-                  ].slice(0, 5));
 
-                  return { ...prev, [repsKey]: nextVal };
-                });
-              }}
-              className="flex-1 bg-lime-950/20 border border-lime-900/30 text-lime-400 text-[8px] font-bold py-1 rounded-lg transition text-center cursor-pointer select-none"
-            >
-              ⚡ Cheat +1 Rep
-            </button>
-          </div>
-        )}
       </div>
 
       {/* AI WEBCAM TRACKER SYSTEM */}
