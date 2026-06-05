@@ -13,6 +13,7 @@ export default function App() {
   const [webAppUrl, setWebAppUrl] = useState('');
   const [jadwal, setJadwal] = useState(DEFAULT_JADWAL);
   const [progressHistory, setProgressHistory] = useState([]);
+  const [mealHistory, setMealHistory] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('offline'); // 'connected' | 'offline'
   const [targetCalories, setTargetCalories] = useState(2800);
   const [targetProtein, setTargetProtein] = useState(80);
@@ -46,6 +47,11 @@ export default function App() {
       setProgressHistory(JSON.parse(savedProgress));
     }
 
+    const savedMeals = localStorage.getItem('calisthenics_meal_history');
+    if (savedMeals) {
+      setMealHistory(JSON.parse(savedMeals));
+    }
+
     const savedCal = localStorage.getItem('calisthenics_target_calories') || '2800';
     const savedProt = localStorage.getItem('calisthenics_target_protein') || '80';
     setTargetCalories(Number(savedCal));
@@ -53,6 +59,29 @@ export default function App() {
 
     loadDataFromSheets(savedUrl);
   }, []);
+
+  // Mencatat Makanan (Gizi AI)
+  const handleLogMeal = (mealData) => {
+    const newMeal = {
+      id: Date.now().toString(),
+      foodName: mealData.foodName,
+      calories: Number(mealData.calories || 0),
+      protein: Number(mealData.protein || 0),
+      carbs: Number(mealData.carbs || 0),
+      fat: Number(mealData.fat || 0),
+      timestamp: new Date().toISOString()
+    };
+    const updatedMeals = [newMeal, ...mealHistory];
+    setMealHistory(updatedMeals);
+    localStorage.setItem('calisthenics_meal_history', JSON.stringify(updatedMeals));
+  };
+
+  // Menghapus Catatan Makanan
+  const handleDeleteMeal = (id) => {
+    const updatedMeals = mealHistory.filter(meal => meal.id !== id);
+    setMealHistory(updatedMeals);
+    localStorage.setItem('calisthenics_meal_history', JSON.stringify(updatedMeals));
+  };
 
   // Memuat data dari Google Sheets (GET)
   const loadDataFromSheets = async (url) => {
@@ -229,6 +258,7 @@ export default function App() {
               <Dashboard
                 jadwal={jadwal}
                 progressHistory={progressHistory}
+                mealHistory={mealHistory}
                 onStartWorkout={handleStartWorkout}
                 connectionStatus={connectionStatus}
                 targetCalories={targetCalories}
@@ -248,6 +278,9 @@ export default function App() {
               <MealTracker
                 webAppUrl={webAppUrl}
                 connectionStatus={connectionStatus}
+                mealHistory={mealHistory}
+                onLogMeal={handleLogMeal}
+                onDeleteMeal={handleDeleteMeal}
               />
             )}
             {activeTab === 'settings' && (

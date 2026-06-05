@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles } from 'lucide-react';
+import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles, Trash2, Calendar } from 'lucide-react';
 
-export default function MealTracker({ webAppUrl, connectionStatus }) {
+export default function MealTracker({ 
+  webAppUrl, 
+  connectionStatus,
+  mealHistory = [],
+  onLogMeal,
+  onDeleteMeal
+}) {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -297,6 +303,18 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
             </p>
           </div>
 
+          {/* Tombol Simpan/Catat */}
+          <button
+            onClick={() => {
+              onLogMeal(result);
+              handleReset();
+            }}
+            className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-bold py-3.5 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow-lg active:scale-[0.99]"
+          >
+            <Check className="w-4 h-4" />
+            <span>Catat & Tambahkan ke Konsumsi Hari Ini</span>
+          </button>
+
           {/* Sync status warning in result */}
           {isSimulated && (
             <div className="text-xs text-amber-300 bg-amber-950/20 border border-amber-900/60 p-4 rounded-xl space-y-1 mt-4">
@@ -313,6 +331,62 @@ export default function MealTracker({ webAppUrl, connectionStatus }) {
           )}
         </div>
       )}
+
+      {/* List Makanan Hari Ini */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center space-x-2.5">
+          <Calendar className="w-5 h-5 text-cyan-400" />
+          <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-350">Makanan yang Dicatat Hari Ini</h3>
+        </div>
+        
+        {(() => {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const todayMeals = mealHistory.filter(meal => {
+            const mealDateStr = new Date(meal.timestamp).toISOString().split('T')[0];
+            return mealDateStr === todayStr;
+          });
+          
+          if (todayMeals.length === 0) {
+            return (
+              <p className="text-xs text-zinc-500 text-center py-6 bg-zinc-950/20 border border-dashed border-zinc-850 rounded-xl">
+                Belum ada makanan yang dicatat untuk hari ini.
+              </p>
+            );
+          }
+          
+          return (
+            <div className="space-y-3">
+              {todayMeals.map((meal) => (
+                <div 
+                  key={meal.id} 
+                  className="bg-zinc-950/40 border border-zinc-850/80 rounded-xl p-3.5 flex items-center justify-between group hover:border-zinc-800 transition"
+                >
+                  <div className="space-y-1 pr-4">
+                    <h4 className="text-xs font-bold text-zinc-200 leading-tight">{meal.foodName}</h4>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-500 font-mono">
+                      <span className="text-cyan-400 font-semibold">{meal.calories} kkal</span>
+                      <span>•</span>
+                      <span>Protein: <span className="text-lime-400 font-semibold">{meal.protein}g</span></span>
+                      <span>•</span>
+                      <span>Karb: {meal.carbs}g</span>
+                      <span>•</span>
+                      <span>Lemak: {meal.fat}g</span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => onDeleteMeal(meal.id)}
+                    className="p-2 bg-zinc-900/60 border border-zinc-850 hover:bg-red-950/20 hover:border-red-900/30 text-zinc-500 hover:text-red-400 rounded-lg transition shrink-0 cursor-pointer"
+                    title="Hapus catatan"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }

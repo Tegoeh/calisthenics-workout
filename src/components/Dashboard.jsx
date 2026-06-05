@@ -4,6 +4,7 @@ import { Play, Dumbbell, Calendar, Info, CloudCheck, Flame, Scale, Trophy, Alert
 export default function Dashboard({ 
   jadwal, 
   progressHistory, 
+  mealHistory = [],
   onStartWorkout, 
   connectionStatus,
   targetCalories,
@@ -38,6 +39,24 @@ export default function Dashboard({
 
   const completedCount = getWeeklyProgress();
 
+  // Hitung total kalori dan protein hari ini
+  const getTodayIntake = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayMeals = mealHistory.filter(meal => {
+      const mealDateStr = new Date(meal.timestamp).toISOString().split('T')[0];
+      return mealDateStr === todayStr;
+    });
+    
+    const calories = todayMeals.reduce((acc, meal) => acc + (meal.calories || 0), 0);
+    const protein = todayMeals.reduce((acc, meal) => acc + (meal.protein || 0), 0);
+    
+    return { calories, protein };
+  };
+
+  const { calories: todayCalories, protein: todayProtein } = getTodayIntake();
+  const calPercent = Math.min(Math.round((todayCalories / targetCalories) * 100), 100);
+  const protPercent = Math.min(Math.round((todayProtein / targetProtein) * 100), 100);
+
   return (
     <div className="max-w-xl mx-auto space-y-6 px-4 py-2">
       {/* Profil Calisthenics & BMI Header */}
@@ -69,6 +88,70 @@ export default function Dashboard({
             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Target Protein</span>
             <span className="text-xs font-extrabold text-lime-400 mt-1.5 block font-mono">{targetProtein}g</span>
             <span className="text-[8px] text-zinc-500 block mt-0.5">Sintesis Otot</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Nutrisi Hari Ini */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl"></div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <Flame className="w-5 h-5 text-cyan-400" />
+            <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-300">Asupan Gizi Hari Ini</h3>
+          </div>
+          <span className="text-[8px] bg-zinc-950 border border-zinc-850 px-2.5 py-1 rounded-full text-zinc-500 font-extrabold uppercase tracking-wider">
+            Target Surplus
+          </span>
+        </div>
+
+        <div className="space-y-4">
+          {/* Calorie Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-zinc-400">Energi (Kalori)</span>
+              <span className="font-mono text-zinc-300">
+                <span className="text-cyan-400 font-bold">{todayCalories}</span> / {targetCalories} kkal
+              </span>
+            </div>
+            <div className="h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-850/30">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-600 to-cyan-450 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${calPercent}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-[9px] text-zinc-500 font-bold">
+              <span>{Math.round((todayCalories / targetCalories) * 100)}% Tercapai</span>
+              {todayCalories < targetCalories ? (
+                <span>Kurang {targetCalories - todayCalories} kkal lagi</span>
+              ) : (
+                <span className="text-cyan-400">Target Surplus Tercapai!</span>
+              )}
+            </div>
+          </div>
+
+          {/* Protein Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-zinc-400">Pembangun Otot (Protein)</span>
+              <span className="font-mono text-zinc-300">
+                <span className="text-lime-400 font-bold">{todayProtein}</span> / {targetProtein}g
+              </span>
+            </div>
+            <div className="h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-850/30">
+              <div 
+                className="h-full bg-gradient-to-r from-lime-600 to-lime-450 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${protPercent}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-[9px] text-zinc-500 font-bold">
+              <span>{Math.round((todayProtein / targetProtein) * 100)}% Tercapai</span>
+              {todayProtein < targetProtein ? (
+                <span>Kurang {targetProtein - todayProtein}g lagi</span>
+              ) : (
+                <span className="text-lime-400">Sintesis Anabolik Aktif!</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
