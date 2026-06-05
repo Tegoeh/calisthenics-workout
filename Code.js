@@ -135,43 +135,67 @@ function doPost(e) {
         })).setMimeType(ContentService.MimeType.JSON);
       }
       
-      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=" + apiKey;
+      const models = [
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash"
+      ];
       
-      const payload = {
-        contents: [
-          {
-            parts: [
-              {
-                text: "Anda adalah ahli gizi olahraga dan pelatih calisthenics profesional. Analisis foto makanan ini. Berikan estimasi kalori total (kkal), protein (gram), karbohidrat (gram), lemak (gram), nama makanan, dan tips nutrisi ringkas untuk pembangun otot ektomorf (tinggi 172cm, BB 45kg) agar surplus kalori tercapai. Kembalikan respons dalam format JSON murni tanpa markdown code block, seperti: {\"foodName\": \"...\", \"calories\": 0, \"protein\": 0, \"carbs\": 0, \"fat\": 0, \"tips\": \"...\"}"
-              },
-              {
-                inlineData: {
-                  mimeType: data.mimeType || "image/jpeg",
-                  data: data.imageRaw
-                }
-              }
-            ]
-          }
-        ]
-      };
-      
-      const options = {
-        method: "post",
-        contentType: "application/json",
-        payload: JSON.stringify(payload),
-        muteHttpExceptions: true
-      };
-      
-      const response = UrlFetchApp.fetch(url, options);
-      const resText = response.getContentText();
-      const resJson = JSON.parse(resText);
-      
-      // Ambil teks hasil generate dari struktur response Gemini
+      let lastError = "";
       let analysisText = "";
-      if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content.parts[0].text) {
-        analysisText = resJson.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error("Gagal menerima analisis valid dari Gemini API. " + resText);
+      
+      for (let i = 0; i < models.length; i++) {
+        const modelName = models[i];
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
+        
+        const payload = {
+          contents: [
+            {
+              parts: [
+                {
+                  text: "Anda adalah ahli gizi olahraga dan pelatih calisthenics profesional. Analisis foto makanan ini. Berikan estimasi kalori total (kkal), protein (gram), karbohidrat (gram), lemak (gram), nama makanan, dan tips nutrisi ringkas untuk pembangun otot ektomorf (tinggi 172cm, BB 45kg) agar surplus kalori tercapai. Kembalikan respons dalam format JSON murni tanpa markdown code block, seperti: {\"foodName\": \"...\", \"calories\": 0, \"protein\": 0, \"carbs\": 0, \"fat\": 0, \"tips\": \"...\"}"
+                },
+                {
+                  inlineData: {
+                    mimeType: data.mimeType || "image/jpeg",
+                    data: data.imageRaw
+                  }
+                }
+              ]
+            }
+          ]
+        };
+        
+        const options = {
+          method: "post",
+          contentType: "application/json",
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
+        };
+        
+        try {
+          const response = UrlFetchApp.fetch(url, options);
+          const resText = response.getContentText();
+          const resJson = JSON.parse(resText);
+          
+          if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content.parts[0].text) {
+            analysisText = resJson.candidates[0].content.parts[0].text;
+            break; // Berhasil! Keluar dari loop pencarian model
+          } else if (resJson.error) {
+            lastError = "Model " + modelName + " error " + resJson.error.code + ": " + resJson.error.message;
+            console.warn(lastError);
+          } else {
+            lastError = "Model " + modelName + " respon tidak terduga: " + resText;
+            console.warn(lastError);
+          }
+        } catch (e) {
+          lastError = "Model " + modelName + " gagal dipanggil: " + e.toString();
+          console.warn(lastError);
+        }
+      }
+      
+      if (!analysisText) {
+        throw new Error("Gagal menerima analisis valid dari Gemini API. Semua model (" + models.join(", ") + ") mengalami kendala limitasi. Detail kendala terakhir: " + lastError);
       }
       
       return ContentService.createTextOutput(JSON.stringify({
