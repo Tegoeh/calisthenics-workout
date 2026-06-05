@@ -8,19 +8,75 @@ export default function WorkoutSession({
   onCancelWorkout, 
   loading 
 }) {
+  const [sessionPhase, setSessionPhase] = useState('warmup'); // 'warmup' | 'workout' | 'cooldown' | 'finish'
   const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
   const [restTimeLeft, setRestTimeLeft] = useState(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [notes, setNotes] = useState('');
-  const [isWorkoutFinished, setIsWorkoutFinished] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   
   const timerRef = useRef(null);
   
   const activeExercise = workoutList[currentExerciseIdx];
   const totalExercises = workoutList.length;
+
+  const warmupItems = [
+    {
+      name: "Rotasi Sendi Bahu & Lengan",
+      duration: "10-15 putaran",
+      desc: "Putar bahu ke depan dan belakang secara perlahan untuk melumasi sendi peluru bahu."
+    },
+    {
+      name: "Peregangan Pergelangan Tangan (Wrist Stretch)",
+      duration: "30-45 detik",
+      desc: "Lakukan peregangan pergelangan tangan di lantai dalam berbagai arah genggaman. Sangat penting bagi pemula calisthenics untuk menghindari cedera."
+    },
+    {
+      name: "Scapula Shrugs (Active Hang)",
+      duration: "10 repetisi",
+      desc: "Tarik bahu ke atas dan ke bawah saat menggantung di bar untuk mengaktifkan belikat dan otot trapezius."
+    },
+    {
+      name: "Bodyweight Squat Ringan",
+      duration: "8-10 repetisi",
+      desc: "Squat perlahan tanpa beban tambahan untuk memanaskan sendi lutut dan pinggul."
+    },
+    {
+      name: "Jumping Jacks / Lari di Tempat",
+      duration: "1 menit",
+      desc: "Meningkatkan detak jantung secara bertahap dan menaikkan suhu tubuh inti sebelum menarik/mendorong beban tubuh."
+    }
+  ];
+
+  const cooldownItems = [
+    {
+      name: "Peregangan Bahu (Shoulder Stretch)",
+      duration: "30 detik/sisi",
+      desc: "Tarik lengan menyilang dada dan tahan dengan tangan yang lain untuk meregangkan deltoid."
+    },
+    {
+      name: "Peregangan Dada (Chest Stretch)",
+      duration: "30 detik/sisi",
+      desc: "Letakkan satu tangan pada dinding atau tiang bar, lalu putar tubuh berlawanan arah untuk meregangkan dada."
+    },
+    {
+      name: "Child's Pose (Dekompresi Tulang Belakang)",
+      duration: "1 menit",
+      desc: "Duduk bertumpu pada tumit kaki, luruskan lengan ke depan lantai, dan letakkan dahi di lantai untuk menenangkan saraf dan mendekopresi tulang belakang."
+    },
+    {
+      name: "Peregangan Pergelangan Tangan Pasif",
+      duration: "30 detik",
+      desc: "Tarik telapak tangan ke arah dalam untuk menenangkan tendon pergelangan tangan yang tegang pasca-gantungan."
+    },
+    {
+      name: "Pernapasan Dalam (Deep Breathing)",
+      duration: "1-2 menit",
+      desc: "Tarik napas dalam dari hidung, keluarkan perlahan dari mulut untuk mengembalikan detak jantung ke kondisi istirahat (parasimpatis)."
+    }
+  ];
 
   useEffect(() => {
     setShowDetails(false);
@@ -100,8 +156,8 @@ export default function WorkoutSession({
         setCurrentExerciseIdx(prev => prev + 1);
         setCurrentSet(1);
       } else {
-        // Semua gerakan selesai
-        setIsWorkoutFinished(true);
+        // Semua gerakan selesai, lanjut ke pendinginan
+        setSessionPhase('cooldown');
         playBeep(523.25, 0.8); // Beep C5 untuk sukses besar
       }
     }
@@ -111,8 +167,119 @@ export default function WorkoutSession({
     onFinishWorkout(day, notes);
   };
 
-  // Tampilan layar selesai
-  if (isWorkoutFinished) {
+  // 1. Tampilan Layar Pemanasan (Warm-Up)
+  if (sessionPhase === 'warmup') {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-4 space-y-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onCancelWorkout}
+            className="flex items-center space-x-1.5 text-zinc-500 hover:text-zinc-350 text-xs transition cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Batalkan Sesi</span>
+          </button>
+          <span className="text-[10px] bg-amber-950/30 text-amber-400 border border-amber-850/30 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+            Fase 1: Pemanasan
+          </span>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-bold text-zinc-150">Pemanasan Wajib (Warm-Up)</h2>
+            <p className="text-xs text-zinc-455 leading-relaxed font-sans">
+              Pemanasan sangat krusial untuk melumasi sendi belikat & pergelangan tangan, meregangkan otot secara aktif, dan mencegah ketegangan tendon berlebih.
+            </p>
+          </div>
+
+          <div className="space-y-3.5">
+            {warmupItems.map((item, idx) => (
+              <div key={idx} className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-3.5 space-y-1">
+                <div className="flex justify-between items-start">
+                  <h4 className="text-xs font-bold text-zinc-200 flex items-center space-x-2">
+                    <span className="w-4 h-4 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center font-mono text-[9px] font-bold">
+                      {idx + 1}
+                    </span>
+                    <span>{item.name}</span>
+                  </h4>
+                  <span className="text-[9px] bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-amber-400 font-mono font-bold shrink-0">
+                    {item.duration}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 pl-6 leading-relaxed font-sans">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              playBeep(660, 0.2);
+              setSessionPhase('workout');
+            }}
+            className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-extrabold py-4 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow-lg active:scale-[0.98]"
+          >
+            <span>Mulai Latihan Inti (Workout)</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Tampilan Layar Pendinginan (Cool-Down)
+  if (sessionPhase === 'cooldown') {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-4 space-y-6">
+        <div className="flex justify-end">
+          <span className="text-[10px] bg-cyan-950/30 text-cyan-400 border border-cyan-850/30 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+            Fase 3: Pendinginan
+          </span>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-bold text-zinc-150">Pendinginan & Recovery (Cool-Down)</h2>
+            <p className="text-xs text-zinc-455 leading-relaxed font-sans">
+              Regangkan otot-otot Anda untuk merangsang proses perbaikan serat otot, meredakan stres saraf pusat, dan mengembalikan detak jantung ke kondisi istirahat.
+            </p>
+          </div>
+
+          <div className="space-y-3.5">
+            {cooldownItems.map((item, idx) => (
+              <div key={idx} className="bg-zinc-950/40 border border-zinc-850 rounded-xl p-3.5 space-y-1">
+                <div className="flex justify-between items-start">
+                  <h4 className="text-xs font-bold text-zinc-200 flex items-center space-x-2">
+                    <span className="w-4 h-4 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-mono text-[9px] font-bold">
+                      {idx + 1}
+                    </span>
+                    <span>{item.name}</span>
+                  </h4>
+                  <span className="text-[9px] bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-cyan-400 font-mono font-bold shrink-0">
+                    {item.duration}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 pl-6 leading-relaxed font-sans">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              playBeep(660, 0.2);
+              setSessionPhase('finish');
+            }}
+            className="w-full bg-lime-500 hover:bg-lime-400 text-zinc-950 font-extrabold py-4 px-6 rounded-xl transition flex items-center justify-center space-x-2 text-sm cursor-pointer shadow-lg active:scale-[0.98]"
+          >
+            <span>Simpan Hasil Latihan</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Tampilan Layar Selesai (Simpan Hasil)
+  if (sessionPhase === 'finish') {
     return (
       <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden space-y-6">
@@ -124,8 +291,8 @@ export default function WorkoutSession({
 
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-zinc-100 tracking-tight">Workout Selesai!</h2>
-            <p className="text-sm text-zinc-400 max-w-[280px] mx-auto leading-relaxed">
-              Kerja bagus! Anda baru saja memperkuat otot dan mengadaptasi tendon Anda hari ini.
+            <p className="text-sm text-zinc-400 max-w-[280px] mx-auto leading-relaxed font-sans">
+              Kerja bagus! Sesi pemanasan, latihan inti, dan pendinginan telah diselesaikan secara lengkap hari ini.
             </p>
           </div>
 
