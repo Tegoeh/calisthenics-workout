@@ -15,11 +15,16 @@ export default function WorkoutSession({
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [notes, setNotes] = useState('');
   const [isWorkoutFinished, setIsWorkoutFinished] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   
   const timerRef = useRef(null);
   
   const activeExercise = workoutList[currentExerciseIdx];
   const totalExercises = workoutList.length;
+
+  useEffect(() => {
+    setShowDetails(false);
+  }, [currentExerciseIdx]);
 
   // Bunyikan beep menggunakan Web Audio API
   const playBeep = (frequency, duration) => {
@@ -220,10 +225,31 @@ export default function WorkoutSession({
 
           {/* Form Guide/Description */}
           <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-4 space-y-1.5">
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Panduan Gerakan:</span>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Deskripsi Singkat:</span>
             <p className="text-xs text-zinc-400 leading-relaxed font-sans">
               {activeExercise.Deskripsi}
             </p>
+
+            {/* Accordion Detail Langkah */}
+            {activeExercise.Langkah && activeExercise.Langkah.length > 0 && (
+              <div className="border-t border-zinc-800/60 pt-2.5 mt-2.5">
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="flex items-center justify-between w-full text-left text-xs font-bold text-cyan-400 hover:text-cyan-300 transition focus:outline-none cursor-pointer"
+                >
+                  <span>Lihat Langkah Detail Gerakan</span>
+                  <span className="text-[10px]">{showDetails ? '▲ Tutup' : '▼ Pelajari Form'}</span>
+                </button>
+                
+                {showDetails && (
+                  <ol className="list-decimal pl-4 pt-2.5 space-y-1.5 text-xs text-zinc-400 leading-relaxed">
+                    {activeExercise.Langkah.map((step, sIdx) => (
+                      <li key={sIdx}>{step}</li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action Button */}

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, Calendar, BookOpen, Settings as SettingsIcon, Shield, RefreshCw } from 'lucide-react';
+import { Dumbbell, Calendar, BookOpen, Settings as SettingsIcon, Shield, RefreshCw, Sparkles } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import WorkoutSession from './components/WorkoutSession';
 import History from './components/History';
 import CalisthenicsGuide from './components/CalisthenicsGuide';
 import Settings from './components/Settings';
+import MealTracker from './components/MealTracker';
 import { DEFAULT_JADWAL } from './utils/mockData';
 
 export default function App() {
@@ -218,6 +219,12 @@ export default function App() {
             {activeTab === 'guide' && (
               <CalisthenicsGuide />
             )}
+            {activeTab === 'meal' && (
+              <MealTracker
+                webAppUrl={webAppUrl}
+                connectionStatus={connectionStatus}
+              />
+            )}
             {activeTab === 'settings' && (
               <Settings
                 webAppUrl={webAppUrl}
@@ -267,6 +274,17 @@ export default function App() {
             >
               <BookOpen className="w-5 h-5" />
               <span className="text-[10px] font-bold tracking-wide">Panduan</span>
+            </button>
+
+            {/* Meal Tracker Tab */}
+            <button
+              onClick={() => setActiveTab('meal')}
+              className={`flex flex-col items-center space-y-1 transition cursor-pointer ${
+                activeTab === 'meal' ? 'text-lime-400' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="text-[10px] font-bold tracking-wide">Gizi AI</span>
             </button>
 
             {/* Settings Tab */}

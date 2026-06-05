@@ -124,6 +124,63 @@ function doPost(e) {
     
     // Parse body data
     const data = JSON.parse(e.postData.contents);
+    
+    // JIKA ACTION ADALAH ANALISIS MAKANAN DENGAN GEMINI AI
+    if (data.action === "analyze_meal") {
+      const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+      if (!apiKey) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: "error",
+          message: "API Key Gemini belum diatur di Script Properties Apps Script."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+      
+      const payload = {
+        contents: [
+          {
+            parts: [
+              {
+                text: "Anda adalah ahli gizi olahraga dan pelatih calisthenics profesional. Analisis foto makanan ini. Berikan estimasi kalori total (kkal), protein (gram), karbohidrat (gram), lemak (gram), nama makanan, dan tips nutrisi ringkas untuk pembangun otot ektomorf (tinggi 172cm, BB 45kg) agar surplus kalori tercapai. Kembalikan respons dalam format JSON murni tanpa markdown code block, seperti: {\"foodName\": \"...\", \"calories\": 0, \"protein\": 0, \"carbs\": 0, \"fat\": 0, \"tips\": \"...\"}"
+              },
+              {
+                inlineData: {
+                  mimeType: data.mimeType || "image/jpeg",
+                  data: data.imageRaw
+                }
+              }
+            ]
+          }
+        ]
+      };
+      
+      const options = {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      };
+      
+      const response = UrlFetchApp.fetch(url, options);
+      const resText = response.getContentText();
+      const resJson = JSON.parse(resText);
+      
+      // Ambil teks hasil generate dari struktur response Gemini
+      let analysisText = "";
+      if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content.parts[0].text) {
+        analysisText = resJson.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error("Gagal menerima analisis valid dari Gemini API. " + resText);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        analysis: analysisText
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // ACTION DEFAULT: Simpan Progress Latihan
     const tanggal = data.tanggal || new Date().toISOString().split('T')[0];
     const hariWorkout = data.hariWorkout || "";
     const status = data.status || "Selesai";
