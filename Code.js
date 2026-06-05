@@ -18,6 +18,7 @@
 // Konstanta Nama Sheet
 const SHEET_JADWAL = "Jadwal";
 const SHEET_PROGRESS = "Progress";
+const SHEET_MAKANAN = "Makanan";
 
 /**
  * Endpoint GET: Membaca jadwal latihan dan riwayat progress terakhir
@@ -89,10 +90,30 @@ function doGet(e) {
       progressList.push(item);
     }
     
+    // 3. Ambil data Makanan (buat sheet jika belum ada)
+    let sheetMakanan = ss.getSheetByName(SHEET_MAKANAN);
+    if (!sheetMakanan) {
+      sheetMakanan = ss.insertSheet(SHEET_MAKANAN);
+      sheetMakanan.appendRow(["Id", "Tanggal", "NamaMakanan", "Kalori", "Protein", "Karbohidrat", "Lemak", "Timestamp"]);
+    }
+    
+    const valuesMakanan = sheetMakanan.getDataRange().getValues();
+    const headersMakanan = valuesMakanan[0];
+    const makananList = [];
+    for (let i = 1; i < valuesMakanan.length; i++) {
+      const row = valuesMakanan[i];
+      const item = {};
+      for (let j = 0; j < headersMakanan.length; j++) {
+        item[headersMakanan[j]] = row[j];
+      }
+      makananList.push(item);
+    }
+    
     const responseData = {
       status: "success",
       jadwal: jadwalList,
-      progress: progressList
+      progress: progressList,
+      makanan: makananList
     };
     
     return ContentService.createTextOutput(JSON.stringify(responseData))
@@ -201,6 +222,47 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({
         status: "success",
         analysis: analysisText
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // JIKA ACTION ADALAH MENCATAT MAKANAN
+    if (data.action === "log_meal") {
+      let sheetMakanan = ss.getSheetByName(SHEET_MAKANAN);
+      if (!sheetMakanan) {
+        sheetMakanan = ss.insertSheet(SHEET_MAKANAN);
+        sheetMakanan.appendRow(["Id", "Tanggal", "NamaMakanan", "Kalori", "Protein", "Karbohidrat", "Lemak", "Timestamp"]);
+      }
+      sheetMakanan.appendRow([
+        data.id,
+        data.tanggal || new Date().toISOString().split('T')[0],
+        data.foodName,
+        data.calories,
+        data.protein,
+        data.carbs,
+        data.fat,
+        data.timestamp || new Date().toISOString()
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Makanan berhasil dicatat!"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // JIKA ACTION ADALAH MENGHAPUS MAKANAN
+    if (data.action === "delete_meal") {
+      let sheetMakanan = ss.getSheetByName(SHEET_MAKANAN);
+      if (sheetMakanan) {
+        const values = sheetMakanan.getDataRange().getValues();
+        for (let i = 1; i < values.length; i++) {
+          if (values[i][0].toString() === data.id.toString()) {
+            sheetMakanan.deleteRow(i + 1);
+            break;
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Catatan makanan berhasil dihapus!"
       })).setMimeType(ContentService.MimeType.JSON);
     }
     

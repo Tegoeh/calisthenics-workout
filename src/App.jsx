@@ -61,7 +61,7 @@ export default function App() {
   }, []);
 
   // Mencatat Makanan (Gizi AI)
-  const handleLogMeal = (mealData) => {
+  const handleLogMeal = async (mealData) => {
     const newMeal = {
       id: Date.now().toString(),
       foodName: mealData.foodName,
@@ -74,13 +74,66 @@ export default function App() {
     const updatedMeals = [newMeal, ...mealHistory];
     setMealHistory(updatedMeals);
     localStorage.setItem('calisthenics_meal_history', JSON.stringify(updatedMeals));
+
+    if (connectionStatus === 'connected' && webAppUrl) {
+      try {
+        await fetch(webAppUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: JSON.stringify({
+            action: 'log_meal',
+            id: newMeal.id,
+            foodName: newMeal.foodName,
+            calories: newMeal.calories,
+            protein: newMeal.protein,
+            carbs: newMeal.carbs,
+            fat: newMeal.fat,
+            timestamp: newMeal.timestamp,
+            tanggal: newMeal.timestamp.split('T')[0]
+          })
+        });
+        
+        // Muat ulang dari sheet agar tersinkron sempurna
+        setTimeout(() => {
+          loadDataFromSheets(webAppUrl);
+        }, 1500);
+      } catch (error) {
+        console.error("Gagal mengirim makanan ke database:", error);
+      }
+    }
   };
 
   // Menghapus Catatan Makanan
-  const handleDeleteMeal = (id) => {
+  const handleDeleteMeal = async (id) => {
     const updatedMeals = mealHistory.filter(meal => meal.id !== id);
     setMealHistory(updatedMeals);
     localStorage.setItem('calisthenics_meal_history', JSON.stringify(updatedMeals));
+
+    if (connectionStatus === 'connected' && webAppUrl) {
+      try {
+        await fetch(webAppUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: JSON.stringify({
+            action: 'delete_meal',
+            id: id
+          })
+        });
+
+        // Muat ulang dari sheet agar tersinkron sempurna
+        setTimeout(() => {
+          loadDataFromSheets(webAppUrl);
+        }, 1500);
+      } catch (error) {
+        console.error("Gagal menghapus makanan dari database:", error);
+      }
+    }
   };
 
   // Memuat data dari Google Sheets (GET)
@@ -100,6 +153,19 @@ export default function App() {
         if (data.progress) {
           setProgressHistory(data.progress);
           localStorage.setItem('calisthenics_progress_history', JSON.stringify(data.progress));
+        }
+        if (data.makanan) {
+          const mappedMeals = data.makanan.map(meal => ({
+            id: meal.Id || meal.id,
+            foodName: meal.NamaMakanan || meal.foodName,
+            calories: Number(meal.Kalori || meal.calories || 0),
+            protein: Number(meal.Protein || meal.protein || 0),
+            carbs: Number(meal.Karbohidrat || meal.carbs || 0),
+            fat: Number(meal.Lemak || meal.fat || 0),
+            timestamp: meal.Timestamp || meal.timestamp
+          }));
+          setMealHistory(mappedMeals);
+          localStorage.setItem('calisthenics_meal_history', JSON.stringify(mappedMeals));
         }
         setConnectionStatus('connected');
       } else {
@@ -131,6 +197,19 @@ export default function App() {
         if (data.progress) {
           setProgressHistory(data.progress);
           localStorage.setItem('calisthenics_progress_history', JSON.stringify(data.progress));
+        }
+        if (data.makanan) {
+          const mappedMeals = data.makanan.map(meal => ({
+            id: meal.Id || meal.id,
+            foodName: meal.NamaMakanan || meal.foodName,
+            calories: Number(meal.Kalori || meal.calories || 0),
+            protein: Number(meal.Protein || meal.protein || 0),
+            carbs: Number(meal.Karbohidrat || meal.carbs || 0),
+            fat: Number(meal.Lemak || meal.fat || 0),
+            timestamp: meal.Timestamp || meal.timestamp
+          }));
+          setMealHistory(mappedMeals);
+          localStorage.setItem('calisthenics_meal_history', JSON.stringify(mappedMeals));
         }
         setConnectionStatus('connected');
         return true;
