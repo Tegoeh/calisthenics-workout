@@ -11,11 +11,17 @@ export default function Settings({
   targetCalories,
   setTargetCalories,
   targetProtein,
-  setTargetProtein
+  setTargetProtein,
+  weight,
+  setWeight,
+  height,
+  setHeight
 }) {
   const [urlInput, setUrlInput] = useState(webAppUrl);
   const [caloriesInput, setCaloriesInput] = useState(targetCalories);
   const [proteinInput, setProteinInput] = useState(targetProtein);
+  const [weightInput, setWeightInput] = useState(weight);
+  const [heightInput, setHeightInput] = useState(height);
   const [testResult, setTestResult] = useState(null);
 
   const handleSave = () => {
@@ -29,6 +35,9 @@ export default function Settings({
 
     setTargetProtein(Number(proteinInput));
     localStorage.setItem('calisthenics_target_protein', proteinInput);
+
+    setWeight(Number(weightInput));
+    setHeight(Number(heightInput));
 
     setTestResult({ type: 'success', message: 'Semua pengaturan & target berhasil disimpan!' });
   };
@@ -89,6 +98,32 @@ export default function Settings({
               className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
               value={proteinInput}
               onChange={(e) => setProteinInput(Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 border-t border-zinc-800/60 pt-4 mt-2">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+              Berat Badan (kg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
+              value={weightInput}
+              onChange={(e) => setWeightInput(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+              Tinggi Badan (cm)
+            </label>
+            <input
+              type="number"
+              className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
+              value={heightInput}
+              onChange={(e) => setHeightInput(Number(e.target.value))}
             />
           </div>
         </div>

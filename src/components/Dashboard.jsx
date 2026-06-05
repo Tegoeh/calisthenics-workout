@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Dumbbell, Calendar, Info, CloudCheck, Flame, Scale, Trophy, AlertTriangle, ChevronRight, Zap } from 'lucide-react';
+import { Play, Dumbbell, Calendar, Info, CloudCheck, Flame, Scale, Trophy, AlertTriangle, ChevronRight, Zap, CheckCircle2 } from 'lucide-react';
 
 export default function Dashboard({ 
   jadwal, 
@@ -8,9 +8,20 @@ export default function Dashboard({
   onStartWorkout, 
   connectionStatus,
   targetCalories,
-  targetProtein
+  targetProtein,
+  weight,
+  setWeight,
+  height,
+  setHeight,
+  lastPhysiqueUpdate,
+  setLastPhysiqueUpdate
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
+  
+  // State untuk form input task update BB/TB
+  const [taskWeight, setTaskWeight] = useState(weight);
+  const [taskHeight, setTaskHeight] = useState(height);
+  const [taskSuccess, setTaskSuccess] = useState(false);
 
   // Ambil nama hari bahasa Indonesia
   const getIndonesianDay = () => {
@@ -57,6 +68,46 @@ export default function Dashboard({
   const calPercent = Math.min(Math.round((todayCalories / targetCalories) * 100), 100);
   const protPercent = Math.min(Math.round((todayProtein / targetProtein) * 100), 100);
 
+  // Kalkulasi BMI Dinamis
+  const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+  const getBmiCategory = (bmiValue) => {
+    const val = parseFloat(bmiValue);
+    if (val < 18.5) return { text: "Sangat Kurus", color: "text-red-400" };
+    if (val < 25.0) return { text: "Normal", color: "text-lime-405" };
+    return { text: "Kelebihan Berat", color: "text-orange-400" };
+  };
+  const bmiCat = getBmiCategory(bmi);
+
+  // Cek apakah akhir bulan dan belum ada update BB/TB bulan ini
+  const checkPhysiqueUpdateTask = () => {
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    
+    // Aktif di 4 hari terakhir setiap bulan (misal tanggal 28-31)
+    const isEndOfMonth = today.getDate() >= (lastDay - 3);
+    
+    let hasUpdatedThisMonth = false;
+    if (lastPhysiqueUpdate) {
+      const lastDate = new Date(lastPhysiqueUpdate);
+      hasUpdatedThisMonth = lastDate.getFullYear() === today.getFullYear() && 
+                           lastDate.getMonth() === today.getMonth();
+    }
+    
+    return isEndOfMonth && !hasUpdatedThisMonth;
+  };
+  
+  const showPhysiqueTask = checkPhysiqueUpdateTask();
+
+  const handleTaskSubmit = (e) => {
+    e.preventDefault();
+    setWeight(Number(taskWeight));
+    setHeight(Number(taskHeight));
+    const nowIso = new Date().toISOString();
+    setLastPhysiqueUpdate(nowIso);
+    setTaskSuccess(true);
+    setTimeout(() => setTaskSuccess(false), 3000);
+  };
+
   return (
     <div className="max-w-xl mx-auto space-y-6 px-4 py-2">
       {/* Profil Calisthenics & BMI Header */}
@@ -76,8 +127,8 @@ export default function Dashboard({
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 text-center">
             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Fisik & BMI</span>
-            <span className="text-xs font-bold text-zinc-200 mt-1 block">45kg / 15.2</span>
-            <span className="text-[8px] text-red-400 font-semibold block mt-0.5">Sangat Kurus</span>
+            <span className="text-xs font-bold text-zinc-200 mt-1 block font-mono">{weight}kg / {bmi}</span>
+            <span className={`text-[8px] ${bmiCat.color} font-semibold block mt-0.5`}>{bmiCat.text}</span>
           </div>
           <div className="bg-zinc-950/60 border border-zinc-850 rounded-xl p-3 text-center">
             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Target Kalori</span>
@@ -155,6 +206,69 @@ export default function Dashboard({
           </div>
         </div>
       </div>
+
+      {/* Tugas Akhir Bulan: Update BB/TB */}
+      {showPhysiqueTask && (
+        <div className="bg-gradient-to-br from-amber-950/15 to-zinc-900 border border-amber-900/40 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl"></div>
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 bg-amber-950/40 rounded-xl border border-amber-800/30 text-amber-400">
+              <Zap className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <span className="text-[8px] text-amber-400 font-bold uppercase tracking-wider block">Tugas Akhir Bulan</span>
+              <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-250">Perbarui Berat & Tinggi Badan</h3>
+            </div>
+          </div>
+          <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+            Bulan ini segera berakhir! Update berat badan dan tinggi badan terbaru Anda untuk menyesuaikan program hipertrofi ektomorf Anda.
+          </p>
+
+          {taskSuccess ? (
+            <div className="bg-lime-950/20 border border-lime-900 text-lime-400 p-3.5 rounded-xl text-xs flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-lime-400 shrink-0" />
+              <span>Data fisik berhasil disimpan untuk bulan ini!</span>
+            </div>
+          ) : (
+            <form onSubmit={handleTaskSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                    Berat Badan (kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 font-mono focus:outline-none focus:border-amber-500"
+                    value={taskWeight}
+                    onChange={(e) => setTaskWeight(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                    Tinggi Badan (cm)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-2.5 text-xs text-zinc-200 font-mono focus:outline-none focus:border-amber-500"
+                    value={taskHeight}
+                    onChange={(e) => setTaskHeight(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-3 px-4 rounded-xl transition text-xs cursor-pointer shadow-lg active:scale-[0.99]"
+              >
+                Simpan & Selesaikan Tugas Bulan Ini
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Main Focus: Hari Ini */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-6">

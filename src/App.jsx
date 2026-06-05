@@ -18,6 +18,11 @@ export default function App() {
   const [targetCalories, setTargetCalories] = useState(2800);
   const [targetProtein, setTargetProtein] = useState(80);
   
+  // State untuk fisik (BB & TB)
+  const [weight, setWeight] = useState(45);
+  const [height, setHeight] = useState(172);
+  const [lastPhysiqueUpdate, setLastPhysiqueUpdate] = useState('');
+  
   // State untuk sesi aktif
   const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
   const [loading, setLoading] = useState(false);
@@ -56,6 +61,13 @@ export default function App() {
     const savedProt = localStorage.getItem('calisthenics_target_protein') || '80';
     setTargetCalories(Number(savedCal));
     setTargetProtein(Number(savedProt));
+
+    const savedWeight = localStorage.getItem('calisthenics_weight') || '45';
+    const savedHeight = localStorage.getItem('calisthenics_height') || '172';
+    const savedPhysiqueUpdate = localStorage.getItem('calisthenics_last_physique_update') || '';
+    setWeight(Number(savedWeight));
+    setHeight(Number(savedHeight));
+    setLastPhysiqueUpdate(savedPhysiqueUpdate);
 
     loadDataFromSheets(savedUrl);
   }, []);
@@ -342,6 +354,21 @@ export default function App() {
                 connectionStatus={connectionStatus}
                 targetCalories={targetCalories}
                 targetProtein={targetProtein}
+                weight={weight}
+                setWeight={(w) => {
+                  setWeight(w);
+                  localStorage.setItem('calisthenics_weight', w);
+                }}
+                height={height}
+                setHeight={(h) => {
+                  setHeight(h);
+                  localStorage.setItem('calisthenics_height', h);
+                }}
+                lastPhysiqueUpdate={lastPhysiqueUpdate}
+                setLastPhysiqueUpdate={(date) => {
+                  setLastPhysiqueUpdate(date);
+                  localStorage.setItem('calisthenics_last_physique_update', date);
+                }}
               />
             )}
             {activeTab === 'history' && (
@@ -374,6 +401,16 @@ export default function App() {
                 setTargetCalories={setTargetCalories}
                 targetProtein={targetProtein}
                 setTargetProtein={setTargetProtein}
+                weight={weight}
+                setWeight={(w) => {
+                  setWeight(w);
+                  localStorage.setItem('calisthenics_weight', w);
+                }}
+                height={height}
+                setHeight={(h) => {
+                  setHeight(h);
+                  localStorage.setItem('calisthenics_height', h);
+                }}
               />
             )}
           </>
