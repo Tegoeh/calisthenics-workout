@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2 } from 'lucide-react';
 
 export default function Dashboard({ 
@@ -19,6 +19,7 @@ export default function Dashboard({
   onUpdateWater
 }) {
   const [selectedDayOverride, setSelectedDayOverride] = useState(null);
+  const lastClickRef = useRef(0);
   
   // State untuk form input task update BB/TB
   const [taskWeight, setTaskWeight] = useState(weight);
@@ -239,6 +240,10 @@ export default function Dashboard({
               <button
                 key={index}
                 onClick={() => {
+                  const now = Date.now();
+                  if (now - lastClickRef.current < 300) return;
+                  lastClickRef.current = now;
+                  
                   const newAmount = isFilled ? cupVolume - 250 : cupVolume;
                   onUpdateWater(newAmount);
                 }}
@@ -261,19 +266,34 @@ export default function Dashboard({
         {/* Quick buttons */}
         <div className="flex gap-2 pt-1">
           <button
-            onClick={() => onUpdateWater(Math.max(0, waterIntake - 250))}
+            onClick={() => {
+              const now = Date.now();
+              if (now - lastClickRef.current < 300) return;
+              lastClickRef.current = now;
+              onUpdateWater(Math.max(0, waterIntake - 250));
+            }}
             className="flex-1 bg-zinc-950/40 border border-zinc-850 text-zinc-400 hover:text-zinc-200 hover:border-zinc-800 font-semibold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer"
           >
             <span>- 250ml</span>
           </button>
           <button
-            onClick={() => onUpdateWater(Math.min(3000, waterIntake + 250))}
+            onClick={() => {
+              const now = Date.now();
+              if (now - lastClickRef.current < 300) return;
+              lastClickRef.current = now;
+              onUpdateWater(Math.min(3000, waterIntake + 250));
+            }}
             className="flex-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-bold py-2 px-3 rounded-xl transition text-[11px] flex items-center justify-center space-x-1 cursor-pointer"
           >
             <span>+ 250ml</span>
           </button>
           <button
-            onClick={() => onUpdateWater(3000)}
+            onClick={() => {
+              const now = Date.now();
+              if (now - lastClickRef.current < 300) return;
+              lastClickRef.current = now;
+              onUpdateWater(3000);
+            }}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-2 px-3.5 rounded-xl transition text-[11px] flex items-center justify-center cursor-pointer"
             title="Penuhi target langsung"
           >
