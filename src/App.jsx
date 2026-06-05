@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Dumbbell, Calendar, BookOpen, Settings as SettingsIcon, Shield, RefreshCw, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Dumbbell, Calendar, BookOpen, Settings as SettingsIcon, RefreshCw, Sparkles } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import WorkoutSession from './components/WorkoutSession';
 import History from './components/History';
@@ -9,83 +9,73 @@ import MealTracker from './components/MealTracker';
 import { DEFAULT_JADWAL } from './utils/mockData';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [webAppUrl, setWebAppUrl] = useState('');
-  const [jadwal, setJadwal] = useState(DEFAULT_JADWAL);
-  const [progressHistory, setProgressHistory] = useState([]);
-  const [mealHistory, setMealHistory] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState('offline'); // 'connected' | 'offline'
-  const [targetCalories, setTargetCalories] = useState(2800);
-  const [targetProtein, setTargetProtein] = useState(80);
-  
-  // State untuk fisik (BB & TB)
-  const [weight, setWeight] = useState(45);
-  const [height, setHeight] = useState(172);
-  const [weightHistory, setWeightHistory] = useState([]);
-  const [lastPhysiqueUpdate, setLastPhysiqueUpdate] = useState('');
-  
-  // State untuk sesi aktif
-  const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
-  const [loading, setLoading] = useState(false);
-
   const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxstiZ_TZF4h03jXIG5oUvcrPC4Q1KmhJuOnPDr9iZJ0OG87A0I4zFvrpJ2Xp0OCYej/exec';
 
-  // Load awal dari LocalStorage
-  useEffect(() => {
-    let savedUrl = localStorage.getItem('calisthenics_web_app_url');
-    // Daftar URL lama yang bermasalah atau tidak sinkron
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [webAppUrl, setWebAppUrl] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_web_app_url');
     const legacyUrls = [
       'https://script.google.com/macros/s/AKfycbwJkWVtCrxYeOUmW4XMmyv3Y4IH1J10eO8-8IXfS4FUuzkWRwDJ8MCSqkT8WTbaFidb/exec',
       'https://script.google.com/macros/s/AKfycbz4iq4lG5VAIM5XueMSsVKj0Tw8mLNHVRI1Ij80qPsrf39797wmG468F6TiYDS-ucHN/exec'
     ];
-    
-    // Migrasi otomatis ke link yang baru jika menggunakan link lama atau masih kosong
-    if (!savedUrl || legacyUrls.some(u => savedUrl.trim() === u)) {
-      savedUrl = DEFAULT_URL;
+    if (!saved || legacyUrls.some(u => saved.trim() === u)) {
       localStorage.setItem('calisthenics_web_app_url', DEFAULT_URL);
-    } else {
-      savedUrl = savedUrl.trim();
+      return DEFAULT_URL;
     }
-    setWebAppUrl(savedUrl);
+    return saved.trim();
+  });
 
-    const savedProgress = localStorage.getItem('calisthenics_progress_history');
-    if (savedProgress) {
-      setProgressHistory(JSON.parse(savedProgress));
-    }
-
-    const savedMeals = localStorage.getItem('calisthenics_meal_history');
-    if (savedMeals) {
-      setMealHistory(JSON.parse(savedMeals));
-    }
-
-    const savedCal = localStorage.getItem('calisthenics_target_calories') || '2800';
-    const savedProt = localStorage.getItem('calisthenics_target_protein') || '80';
-    setTargetCalories(Number(savedCal));
-    setTargetProtein(Number(savedProt));
-
-    const savedWeight = localStorage.getItem('calisthenics_weight') || '45';
-    const savedHeight = localStorage.getItem('calisthenics_height') || '172';
-    const savedPhysiqueUpdate = localStorage.getItem('calisthenics_last_physique_update') || '';
-    setWeight(Number(savedWeight));
-    setHeight(Number(savedHeight));
-    setLastPhysiqueUpdate(savedPhysiqueUpdate);
-
+  const [jadwal, setJadwal] = useState(DEFAULT_JADWAL);
+  const [progressHistory, setProgressHistory] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_progress_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [mealHistory, setMealHistory] = useState(() => {
+    const saved = localStorage.getItem('calisthenics_meal_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [connectionStatus, setConnectionStatus] = useState('offline'); // 'connected' | 'offline'
+  const [targetCalories, setTargetCalories] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_target_calories') || '2800');
+  });
+  const [targetProtein, setTargetProtein] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_target_protein') || '80');
+  });
+  
+  // State untuk fisik (BB & TB)
+  const [weight, setWeight] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_weight') || '45');
+  });
+  const [height, setHeight] = useState(() => {
+    return Number(localStorage.getItem('calisthenics_height') || '172');
+  });
+  const [weightHistory, setWeightHistory] = useState(() => {
     const savedWeightHistory = localStorage.getItem('calisthenics_weight_history');
     if (savedWeightHistory) {
-      setWeightHistory(JSON.parse(savedWeightHistory));
+      return JSON.parse(savedWeightHistory);
     } else {
-      // Mock data awal agar grafiknya langsung terlihat bagus
+      const savedWeight = localStorage.getItem('calisthenics_weight') || '45';
       const initialHistory = [
         { weight: 44.0, date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
         { weight: 44.5, date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
         { weight: Number(savedWeight), date: new Date().toISOString().split('T')[0] }
       ];
-      setWeightHistory(initialHistory);
       localStorage.setItem('calisthenics_weight_history', JSON.stringify(initialHistory));
+      return initialHistory;
     }
+  });
+  const [lastPhysiqueUpdate, setLastPhysiqueUpdate] = useState(() => {
+    return localStorage.getItem('calisthenics_last_physique_update') || '';
+  });
+  
+  // State untuk sesi aktif
+  const [activeWorkout, setActiveWorkout] = useState(null); // { day, workoutList }
+  const [loading, setLoading] = useState(false);
 
-    loadDataFromSheets(savedUrl);
-  }, []);
+  // Load awal dari Google Sheets
+  useEffect(() => {
+    loadDataFromSheets(webAppUrl);
+  }, [webAppUrl]);
 
   // Mencatat Makanan (Gizi AI)
   const handleLogMeal = async (mealData) => {
@@ -164,7 +154,7 @@ export default function App() {
   };
 
   // Memuat data dari Google Sheets (GET)
-  const loadDataFromSheets = async (url) => {
+  async function loadDataFromSheets(url) {
     if (!url) return;
     const cleanUrl = url.trim();
     setLoading(true);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Database, CheckCircle, XCircle, RefreshCw, HelpCircle, Save, Flame } from 'lucide-react';
 
 export default function Settings({ 

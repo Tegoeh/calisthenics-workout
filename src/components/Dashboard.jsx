@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Play, Dumbbell, Calendar, Info, CloudCheck, Flame, Scale, Trophy, AlertTriangle, ChevronRight, Zap, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { Play, Calendar, Flame, Scale, Trophy, Zap, CheckCircle2 } from 'lucide-react';
 
 export default function Dashboard({ 
   jadwal, 

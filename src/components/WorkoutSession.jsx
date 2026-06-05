@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Play, CheckCircle2, ChevronRight, AlertCircle, RefreshCw, Volume2, VolumeX, ArrowLeft, FastForward } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Dumbbell, Play, CheckCircle2, ChevronRight, RefreshCw, Volume2, VolumeX, ArrowLeft, FastForward } from 'lucide-react';
 
 export default function WorkoutSession({ 
   day, 
@@ -78,12 +78,8 @@ export default function WorkoutSession({
     }
   ];
 
-  useEffect(() => {
-    setShowDetails(false);
-  }, [currentExerciseIdx]);
-
   // Bunyikan beep menggunakan Web Audio API
-  const playBeep = (frequency, duration) => {
+  function playBeep(frequency, duration) {
     if (!isSoundEnabled) return;
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -103,7 +99,25 @@ export default function WorkoutSession({
     } catch (e) {
       console.warn("AudioContext failed to start: ", e);
     }
-  };
+  }
+
+  function goToNextStep() {
+    if (currentSet < activeExercise.Set) {
+      // Lanjut ke set berikutnya di gerakan yang sama
+      setCurrentSet(prev => prev + 1);
+    } else {
+      // Jika set sudah habis, pindah ke gerakan berikutnya
+      if (currentExerciseIdx < totalExercises - 1) {
+        setCurrentExerciseIdx(prev => prev + 1);
+        setCurrentSet(1);
+        setShowDetails(false);
+      } else {
+        // Semua gerakan selesai, lanjut ke pendinginan
+        setSessionPhase('cooldown');
+        playBeep(523.25, 0.8); // Beep C5 untuk sukses besar
+      }
+    }
+  }
 
   // Timer Countdown Effect
   useEffect(() => {
@@ -128,6 +142,7 @@ export default function WorkoutSession({
     }
 
     return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isResting, restTimeLeft]);
 
   const handleFinishSet = () => {
@@ -144,23 +159,6 @@ export default function WorkoutSession({
     clearInterval(timerRef.current);
     setIsResting(false);
     goToNextStep();
-  };
-
-  const goToNextStep = () => {
-    if (currentSet < activeExercise.Set) {
-      // Lanjut ke set berikutnya di gerakan yang sama
-      setCurrentSet(prev => prev + 1);
-    } else {
-      // Jika set sudah habis, pindah ke gerakan berikutnya
-      if (currentExerciseIdx < totalExercises - 1) {
-        setCurrentExerciseIdx(prev => prev + 1);
-        setCurrentSet(1);
-      } else {
-        // Semua gerakan selesai, lanjut ke pendinginan
-        setSessionPhase('cooldown');
-        playBeep(523.25, 0.8); // Beep C5 untuk sukses besar
-      }
-    }
   };
 
   const handleSaveWorkout = () => {

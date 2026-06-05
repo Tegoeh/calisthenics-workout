@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles, Trash2, Calendar, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 
 export default function MealTracker({ 
@@ -8,7 +8,6 @@ export default function MealTracker({
   onLogMeal,
   onDeleteMeal
 }) {
-  const [image, setImage] = useState(null);
   const [expandedRecipe, setExpandedRecipe] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -24,17 +23,12 @@ export default function MealTracker({
     const file = e.target.files[0];
     if (file) {
       setError(null);
-      setImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
   };
 
   // Analisis Makanan (Fisik atau Simulasi)
@@ -135,7 +129,6 @@ export default function MealTracker({
   };
 
   const handleReset = () => {
-    setImage(null);
     setImagePreview(null);
     setResult(null);
     setError(null);

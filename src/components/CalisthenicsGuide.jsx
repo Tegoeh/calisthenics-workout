@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BookOpen, Flame, ShieldAlert, Coffee, Dumbbell, Zap, Award } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, Flame, ShieldAlert, Dumbbell, Zap, Award } from 'lucide-react';
 import { NUTRI_TIPS } from '../utils/mockData';
 
 const PROGRESSION_DATABASE = {

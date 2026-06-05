@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, CheckCircle2, History as HistoryIcon, Info, TrendingUp, Scale } from 'lucide-react';
 
 function WeightChart({ weightHistory }) {
@@ -22,7 +21,7 @@ function WeightChart({ weightHistory }) {
     try {
       const d = new Date(dateStr);
       return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-    } catch (e) {
+    } catch {
       return dateStr;
     }
   };
