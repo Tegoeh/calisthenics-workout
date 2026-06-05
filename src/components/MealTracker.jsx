@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles, Trash2, Calendar } from 'lucide-react';
+import { Camera, Image as ImageIcon, Flame, RefreshCw, AlertCircle, HelpCircle, Check, Sparkles, Trash2, Calendar, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 
 export default function MealTracker({ 
   webAppUrl, 
@@ -9,6 +9,7 @@ export default function MealTracker({
   onDeleteMeal
 }) {
   const [image, setImage] = useState(null);
+  const [expandedRecipe, setExpandedRecipe] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -386,6 +387,159 @@ export default function MealTracker({
             </div>
           );
         })()}
+      </div>
+
+      {/* Rekomendasi Surplus Kalori (Ektomorf Booster) */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center space-x-2.5">
+          <Sparkles className="w-5 h-5 text-lime-400" />
+          <div>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-200">
+              Rekomendasi Surplus Kalori (Ektomorf Booster)
+            </h3>
+            <span className="text-[10px] text-zinc-500 font-sans block mt-0.5">
+              Camilan & minuman sehat padat energi tinggi kalori untuk program bulking.
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-1">
+          {[
+            {
+              name: "Super Bulk Shake",
+              calories: 850,
+              protein: 35,
+              carbs: 95,
+              fat: 36,
+              ingredients: [
+                "1 buah Pisang Raja besar",
+                "2 sdm Selai Kacang murni",
+                "400ml Susu Sapi Full Cream",
+                "35g Oatmeal (diblender halus)",
+                "1 sdm Madu alami"
+              ],
+              steps: [
+                "Blender oatmeal kering terlebih dahulu hingga menjadi tepung halus.",
+                "Masukkan pisang, selai kacang, madu, dan tuangkan susu sapi full cream.",
+                "Blender selama 1-2 menit hingga bertekstur kental dan lembut.",
+                "Sajikan dingin. Minum setelah latihan atau sebelum tidur untuk surplus optimal."
+              ]
+            },
+            {
+              name: "Peanut Butter & Cheese Toast",
+              calories: 480,
+              protein: 16,
+              carbs: 42,
+              fat: 28,
+              ingredients: [
+                "2 lembar Roti Gandum",
+                "2 sdm Selai Kacang murni",
+                "1 slice Keju Cheddar",
+                "1 sdt Mentega"
+              ],
+              steps: [
+                "Panaskan sedikit mentega di wajan, panggang roti gandum hingga kecokelatan.",
+                "Oleskan selai kacang murni di atas permukaan roti selagi hangat.",
+                "Letakkan keju cheddar slice di bagian tengah roti tawar panggang.",
+                "Sajikan hangat agar keju sedikit meleleh. Cocok untuk snack tinggi protein."
+              ]
+            },
+            {
+              name: "Almond & Dates Greek Yogurt",
+              calories: 390,
+              protein: 15,
+              carbs: 48,
+              fat: 16,
+              ingredients: [
+                "150g Greek Yogurt Plain",
+                "5 butir Kurma (buang biji, potong kecil)",
+                "10 butir Kacang Almond panggang",
+                "1 sdm Madu alami"
+              ],
+              steps: [
+                "Masukkan Greek yogurt ke dalam mangkok saji.",
+                "Potong kurma menjadi bagian kecil dan cincang kasar kacang almond.",
+                "Taburkan kurma, almond, dan sirami madu di atas Greek yogurt.",
+                "Aduk rata sebelum dikonsumsi. Bagus untuk sumber protein lambat serap (kasein)."
+              ]
+            }
+          ].map((recipe, idx) => {
+            const isExpanded = expandedRecipe === idx;
+            return (
+              <div 
+                key={idx} 
+                className="bg-zinc-950/40 border border-zinc-850 rounded-xl overflow-hidden transition hover:border-zinc-800"
+              >
+                {/* Header Klik-able */}
+                <div 
+                  onClick={() => setExpandedRecipe(isExpanded ? null : idx)}
+                  className="p-4 flex items-center justify-between cursor-pointer select-none"
+                >
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-zinc-200">{recipe.name}</h4>
+                    <div className="flex items-center space-x-2.5 text-[10px] text-zinc-500 font-mono">
+                      <span className="text-cyan-400 font-bold">{recipe.calories} kkal</span>
+                      <span>•</span>
+                      <span>P: <span className="text-lime-400 font-semibold">{recipe.protein}g</span></span>
+                      <span>•</span>
+                      <span>K: {recipe.carbs}g</span>
+                      <span>•</span>
+                      <span>L: {recipe.fat}g</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Mencegah toggle ekspansi
+                        onLogMeal({
+                          foodName: recipe.name,
+                          calories: recipe.calories,
+                          protein: recipe.protein,
+                          carbs: recipe.carbs,
+                          fat: recipe.fat
+                        });
+                      }}
+                      className="bg-lime-950/50 hover:bg-lime-900/60 border border-lime-900/30 text-lime-400 p-2 rounded-lg transition text-[10px] font-bold flex items-center space-x-1 cursor-pointer"
+                      title="Catat langsung ke konsumsi hari ini"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Catat</span>
+                    </button>
+                    <div className="text-zinc-500 p-1.5">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {isExpanded && (
+                  <div className="border-t border-zinc-900 bg-zinc-950/20 p-4 space-y-4 text-xs animate-fadeIn">
+                    {/* Bahan-bahan */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Bahan-bahan:</span>
+                      <ul className="list-disc pl-4 space-y-1 text-zinc-400 leading-relaxed font-sans">
+                        {recipe.ingredients.map((ing, iIdx) => (
+                          <li key={iIdx}>{ing}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Cara Pembuatan */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Cara Pembuatan:</span>
+                      <ol className="list-decimal pl-4 space-y-1 text-zinc-400 leading-relaxed font-sans">
+                        {recipe.steps.map((step, sIdx) => (
+                          <li key={sIdx}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

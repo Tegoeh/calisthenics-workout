@@ -21,6 +21,7 @@ export default function App() {
   // State untuk fisik (BB & TB)
   const [weight, setWeight] = useState(45);
   const [height, setHeight] = useState(172);
+  const [weightHistory, setWeightHistory] = useState([]);
   const [lastPhysiqueUpdate, setLastPhysiqueUpdate] = useState('');
   
   // State untuk sesi aktif
@@ -68,6 +69,20 @@ export default function App() {
     setWeight(Number(savedWeight));
     setHeight(Number(savedHeight));
     setLastPhysiqueUpdate(savedPhysiqueUpdate);
+
+    const savedWeightHistory = localStorage.getItem('calisthenics_weight_history');
+    if (savedWeightHistory) {
+      setWeightHistory(JSON.parse(savedWeightHistory));
+    } else {
+      // Mock data awal agar grafiknya langsung terlihat bagus
+      const initialHistory = [
+        { weight: 44.0, date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
+        { weight: 44.5, date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
+        { weight: Number(savedWeight), date: new Date().toISOString().split('T')[0] }
+      ];
+      setWeightHistory(initialHistory);
+      localStorage.setItem('calisthenics_weight_history', JSON.stringify(initialHistory));
+    }
 
     loadDataFromSheets(savedUrl);
   }, []);
@@ -235,6 +250,28 @@ export default function App() {
     }
   };
 
+  // Perbarui Berat Badan & Riwayat BB
+  const handleUpdateWeight = (newWeight) => {
+    const w = Number(newWeight);
+    setWeight(w);
+    localStorage.setItem('calisthenics_weight', w.toString());
+
+    // Perbarui riwayat berat badan
+    const todayStr = new Date().toISOString().split('T')[0];
+    setWeightHistory(prev => {
+      const existingIdx = prev.findIndex(item => item.date === todayStr);
+      let updated;
+      if (existingIdx > -1) {
+        updated = prev.map((item, idx) => idx === existingIdx ? { ...item, weight: w } : item);
+      } else {
+        updated = [...prev, { weight: w, date: todayStr }];
+      }
+      updated.sort((a, b) => new Date(a.date) - new Date(b.date));
+      localStorage.setItem('calisthenics_weight_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // Memulai Sesi Workout
   const handleStartWorkout = (day, workoutList) => {
     setActiveWorkout({ day, workoutList });
@@ -355,10 +392,7 @@ export default function App() {
                 targetCalories={targetCalories}
                 targetProtein={targetProtein}
                 weight={weight}
-                setWeight={(w) => {
-                  setWeight(w);
-                  localStorage.setItem('calisthenics_weight', w);
-                }}
+                setWeight={handleUpdateWeight}
                 height={height}
                 setHeight={(h) => {
                   setHeight(h);
@@ -374,6 +408,7 @@ export default function App() {
             {activeTab === 'history' && (
               <History
                 progressHistory={progressHistory}
+                weightHistory={weightHistory}
                 connectionStatus={connectionStatus}
               />
             )}
@@ -402,10 +437,7 @@ export default function App() {
                 targetProtein={targetProtein}
                 setTargetProtein={setTargetProtein}
                 weight={weight}
-                setWeight={(w) => {
-                  setWeight(w);
-                  localStorage.setItem('calisthenics_weight', w);
-                }}
+                setWeight={handleUpdateWeight}
                 height={height}
                 setHeight={(h) => {
                   setHeight(h);

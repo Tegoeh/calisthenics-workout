@@ -23,6 +23,24 @@ export default function Settings({
   const [weightInput, setWeightInput] = useState(weight);
   const [heightInput, setHeightInput] = useState(height);
   const [testResult, setTestResult] = useState(null);
+  
+  // States untuk Kalkulator Gizi
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcAge, setCalcAge] = useState(20);
+  const [calcActivity, setCalcActivity] = useState(1.55);
+  const [calcSurplus, setCalcSurplus] = useState(500);
+  const [calcProteinRatio, setCalcProteinRatio] = useState(2.0);
+
+  const handleApplyCalculation = () => {
+    const bmr = 10 * Number(weightInput) + 6.25 * Number(heightInput) - 5 * Number(calcAge) + 5;
+    const tdee = bmr * Number(calcActivity);
+    const calculatedCalories = Math.round(tdee + Number(calcSurplus));
+    const calculatedProtein = Math.round(Number(weightInput) * Number(calcProteinRatio));
+
+    setCaloriesInput(calculatedCalories);
+    setProteinInput(calculatedProtein);
+    setShowCalc(false);
+  };
 
   const handleSave = () => {
     const trimmedUrl = urlInput.trim();
@@ -126,6 +144,94 @@ export default function Settings({
               onChange={(e) => setHeightInput(Number(e.target.value))}
             />
           </div>
+        </div>
+
+        {/* Collapsible Calculator Section */}
+        <div className="border-t border-zinc-800/60 pt-4 mt-2">
+          <button
+            onClick={() => setShowCalc(!showCalc)}
+            className="flex items-center justify-between w-full text-left text-xs font-bold text-cyan-400 hover:text-cyan-300 transition focus:outline-none cursor-pointer"
+          >
+            <span>Kalkulator Surplus Gizi (Ektomorf Calculator)</span>
+            <span className="text-[10px]">{showCalc ? '▲ Tutup' : '▼ Buka Kalkulator'}</span>
+          </button>
+
+          {showCalc && (
+            <div className="mt-4 space-y-4 bg-zinc-950/40 p-4 rounded-xl border border-zinc-850 animate-fadeIn text-xs">
+              <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                Gunakan kalkulator ilmiah ini untuk mengestimasi kebutuhan kalori harian (TDEE) Anda dan target surplus berdasarkan berat, tinggi, usia, dan tingkat keaktifan saat ini.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                    Usia Anda (tahun)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 font-mono focus:outline-none focus:border-cyan-500"
+                    value={calcAge}
+                    onChange={(e) => setCalcAge(Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                    Rasio Protein (g/kg BB)
+                  </label>
+                  <select
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                    value={calcProteinRatio}
+                    onChange={(e) => setCalcProteinRatio(Number(e.target.value))}
+                  >
+                    <option value={1.6}>1.6g/kg (Pemeliharaan)</option>
+                    <option value={1.8}>1.8g/kg (Anabolik Sedang)</option>
+                    <option value={2.0}>2.0g/kg (Anabolik Maksimal)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                    Tingkat Aktivitas Fisik
+                  </label>
+                  <select
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                    value={calcActivity}
+                    onChange={(e) => setCalcActivity(Number(e.target.value))}
+                  >
+                    <option value={1.2}>Sedentary (Sangat jarang berolahraga)</option>
+                    <option value={1.375}>Ringan (Olahraga ringan 1-2x/minggu)</option>
+                    <option value={1.55}>Sedang (Olahraga calisthenics 3-4x/minggu)</option>
+                    <option value={1.725}>Aktif (Olahraga intensif 5-6x/minggu)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                    Target Surplus Kalori (Bulking Rate)
+                  </label>
+                  <select
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                    value={calcSurplus}
+                    onChange={(e) => setCalcSurplus(Number(e.target.value))}
+                  >
+                    <option value={300}>Clean Bulk (+300 kkal / minggu lambat)</option>
+                    <option value={500}>Moderate Bulk (+500 kkal / ideal ektomorf)</option>
+                    <option value={700}>Aggressive Bulk (+700 kkal / peningkatan cepat)</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleApplyCalculation}
+                className="w-full bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold py-2.5 px-4 rounded-xl transition text-[11px] cursor-pointer shadow active:scale-[0.98]"
+              >
+                Terapkan Hasil Kalkulasi ke Target
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
